@@ -13,17 +13,16 @@ if (!isset($_SESSION['user_id'])) {
 
 // ดึงข้อมูลผู้ใช้
 $user_id = $_SESSION['user_id'];
-$query = "SELECT * FROM users WHERE user_id = '$user_id'";
-$result = mysqli_query($conn, $query);
+$result = db_select("SELECT * FROM users WHERE user_id = ?", "i", [$user_id]);
 $user = mysqli_fetch_assoc($result);
 
 // จัดการการส่งฟอร์ม
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $title = clean_input($_POST['title']);
-    $category_id = clean_input($_POST['category_id']);
-    $location = clean_input($_POST['location']);
-    $description = clean_input($_POST['description']);
-    $priority = clean_input($_POST['priority']);
+    $title = trim($_POST['title']);
+    $category_id = intval($_POST['category_id']);
+    $location = trim($_POST['location']);
+    $description = trim($_POST['description']);
+    $priority = trim($_POST['priority']);
     $image = '';
 
     // ตรวจสอบว่ามีข้อมูลครบหรือไม่
@@ -64,18 +63,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         if (!isset($error)) {
             // บันทึกข้อมูลลงในฐานข้อมูล
-            $query = "INSERT INTO repair_requests (user_id, category_id, title, description, location, priority, image) 
-                      VALUES ('$user_id', '$category_id', '$title', '$description', '$location', '$priority', '$image')";
+            $request_id = db_insert(
+                "INSERT INTO repair_requests (user_id, category_id, title, description, location, priority, image) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "iisssss",
+                [$user_id, $category_id, $title, $description, $location, $priority, $image]
+            );
 
-            if (mysqli_query($conn, $query)) {
-                $request_id = mysqli_insert_id($conn);
-
+            if ($request_id) {
                 // บันทึกประวัติการอัพเดท
                 add_request_history($request_id, $user_id, 'pending', 'สร้างรายการแจ้งซ่อมใหม่');
 
                 // ดึงข้อมูลหมวดหมู่
-                $query = "SELECT category_name FROM categories WHERE category_id = '$category_id'";
-                $result = mysqli_query($conn, $query);
+                $result = db_select("SELECT category_name FROM categories WHERE category_id = ?", "i", [$category_id]);
                 $category = mysqli_fetch_assoc($result);
 
                 // ส่งการแจ้งเตือนไปยัง Telegram
@@ -107,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 header('Location: view_request.php?id=' . $request_id . '&success=1');
                 exit();
             } else {
-                $error = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . mysqli_error($conn);
+                $error = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
             }
         }
     }

@@ -13,42 +13,47 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'buil
 
 // จัดการการเพิ่มผู้ใช้ใหม่
 if (isset($_POST['add_user'])) {
-    $username = clean_input($_POST['username']);
-    $password = $_POST['password'];
-    $fullname = clean_input($_POST['fullname']);
-    $email = clean_input($_POST['email']);
-    $department = clean_input($_POST['department']);
-    $phone = clean_input($_POST['phone']);
-    $role = clean_input($_POST['role']);
-
-    // ตรวจสอบว่าชื่อผู้ใช้ซ้ำหรือไม่
-    $query = "SELECT * FROM users WHERE username = '$username'";
-    $result = mysqli_query($conn, $query);
-
-    if (mysqli_num_rows($result) > 0) {
-        $error = 'ชื่อผู้ใช้นี้มีในระบบแล้ว กรุณาใช้ชื่อผู้ใช้อื่น';
+    if ($_SESSION['role'] == 'building_staff') {
+        $error = 'คุณไม่มีสิทธิ์เพิ่มผู้ใช้ใหม่';
     } else {
-        // ตรวจสอบว่าอีเมลซ้ำหรือไม่
-        $query = "SELECT * FROM users WHERE email = '$email'";
-        $result = mysqli_query($conn, $query);
+        $username = trim($_POST['username']);
+        $password = $_POST['password'];
+        $fullname = trim($_POST['fullname']);
+        $email = trim($_POST['email']);
+        $department = trim($_POST['department']);
+        $phone = trim($_POST['phone']);
+        $role = trim($_POST['role']);
 
-        if (mysqli_num_rows($result) > 0) {
-            $error = 'อีเมลนี้มีในระบบแล้ว กรุณาใช้อีเมลอื่น';
+        // ตรวจสอบว่าชื่อผู้ใช้ซ้ำหรือไม่
+        $result = db_select("SELECT * FROM users WHERE username = ?", "s", [$username]);
+
+        if ($result && mysqli_num_rows($result) > 0) {
+            $error = 'ชื่อผู้ใช้นี้มีในระบบแล้ว กรุณาใช้ชื่อผู้ใช้อื่น';
         } else {
-            // เข้ารหัสรหัสผ่าน
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            // ตรวจสอบว่าอีเมลซ้ำหรือไม่
+            $result = db_select("SELECT * FROM users WHERE email = ?", "s", [$email]);
 
-            // บันทึกข้อมูลลงในฐานข้อมูล
-            $query = "INSERT INTO users (username, password, fullname, email, department, phone, role) 
-                      VALUES ('$username', '$hashed_password', '$fullname', '$email', '$department', '$phone', '$role')";
-
-            if (mysqli_query($conn, $query)) {
-                $success = 'เพิ่มผู้ใช้งานใหม่เรียบร้อยแล้ว';
-
-                // ส่งการแจ้งเตือนไปยัง Telegram
-                send_telegram_notification("<b>มีผู้ใช้ใหม่ในระบบ</b>\n\nชื่อผู้ใช้: $username\nชื่อ-นามสกุล: $fullname\nบทบาท: " . ($role == 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งานทั่วไป') . "\nเพิ่มโดย: " . $_SESSION['fullname'] . "\nเวลา: " . thai_date(date('Y-m-d H:i:s')));
+            if ($result && mysqli_num_rows($result) > 0) {
+                $error = 'อีเมลนี้มีในระบบแล้ว กรุณาใช้อีเมลอื่น';
             } else {
-                $error = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . mysqli_error($conn);
+                // เข้ารหัสรหัสผ่าน
+                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+                // บันทึกข้อมูลลงในฐานข้อมูล
+                $insert_id = db_insert(
+                    "INSERT INTO users (username, password, fullname, email, department, phone, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    "sssssss",
+                    [$username, $hashed_password, $fullname, $email, $department, $phone, $role]
+                );
+
+                if ($insert_id) {
+                    $success = 'เพิ่มผู้ใช้งานใหม่เรียบร้อยแล้ว';
+
+                    // ส่งการแจ้งเตือนไปยัง Telegram
+                    send_telegram_notification("<b>มีผู้ใช้ใหม่ในระบบ</b>\n\nชื่อผู้ใช้: $username\nชื่อ-นามสกุล: $fullname\nบทบาท: " . ($role == 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งานทั่วไป') . "\nเพิ่มโดย: " . $_SESSION['fullname'] . "\nเวลา: " . thai_date(date('Y-m-d H:i:s')));
+                } else {
+                    $error = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+                }
             }
         }
     }
@@ -59,36 +64,33 @@ if (isset($_POST['edit_user'])) {
     if ($_SESSION['role'] == 'building_staff') {
         $error = 'คุณไม่มีสิทธิ์แก้ไขข้อมูลผู้ใช้';
     } else {
-        $user_id = clean_input($_POST['user_id']);
-        $fullname = clean_input($_POST['fullname']);
-        $email = clean_input($_POST['email']);
-        $department = clean_input($_POST['department']);
-        $phone = clean_input($_POST['phone']);
-        $role = clean_input($_POST['role']);
+        $user_id = intval($_POST['user_id']);
+        $fullname = trim($_POST['fullname']);
+        $email = trim($_POST['email']);
+        $department = trim($_POST['department']);
+        $phone = trim($_POST['phone']);
+        $role = trim($_POST['role']);
 
         // ตรวจสอบว่าอีเมลซ้ำหรือไม่ (ยกเว้นผู้ใช้ปัจจุบัน)
-        $query = "SELECT * FROM users WHERE email = '$email' AND user_id != '$user_id'";
-        $result = mysqli_query($conn, $query);
+        $result = db_select("SELECT * FROM users WHERE email = ? AND user_id != ?", "si", [$email, $user_id]);
 
-        if (mysqli_num_rows($result) > 0) {
+        if ($result && mysqli_num_rows($result) > 0) {
             $error = 'อีเมลนี้มีในระบบแล้ว กรุณาใช้อีเมลอื่น';
         } else {
             // อัพเดตข้อมูลผู้ใช้
-            $query = "UPDATE users SET 
-                  fullname = '$fullname', 
-                  email = '$email', 
-                  department = '$department', 
-                  phone = '$phone', 
-                  role = '$role' 
-                  WHERE user_id = '$user_id'";
+            $update_success = db_execute(
+                "UPDATE users SET fullname = ?, email = ?, department = ?, phone = ?, role = ? WHERE user_id = ?",
+                "sssssi",
+                [$fullname, $email, $department, $phone, $role, $user_id]
+            );
 
-            if (mysqli_query($conn, $query)) {
+            if ($update_success) {
                 $success = 'อัพเดตข้อมูลผู้ใช้เรียบร้อยแล้ว';
 
                 // ส่งการแจ้งเตือนไปยัง Telegram
                 send_telegram_notification("<b>มีการอัพเดตข้อมูลผู้ใช้</b>\n\nรหัส: $user_id\nชื่อ-นามสกุล: $fullname\nบทบาท: " . ($role == 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งานทั่วไป') . "\nอัพเดตโดย: " . $_SESSION['fullname'] . "\nเวลา: " . thai_date(date('Y-m-d H:i:s')));
             } else {
-                $error = 'เกิดข้อผิดพลาดในการอัพเดตข้อมูล: ' . mysqli_error($conn);
+                $error = 'เกิดข้อผิดพลาดในการอัพเดตข้อมูล';
             }
         }
     }
@@ -99,27 +101,26 @@ if (isset($_POST['reset_password'])) {
     if ($_SESSION['role'] == 'building_staff') {
         $error = 'คุณไม่มีสิทธิ์รีเซ็ตรหัสผ่าน';
     } else {
-        $user_id = clean_input($_POST['user_id']);
-        $new_password = clean_input($_POST['new_password']);
+        $user_id = intval($_POST['user_id']);
+        $new_password = $_POST['new_password'];
 
         // เข้ารหัสรหัสผ่านใหม่
         $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
 
         // อัพเดตรหัสผ่าน
-        $query = "UPDATE users SET password = '$hashed_password' WHERE user_id = '$user_id'";
+        $update_success = db_execute("UPDATE users SET password = ? WHERE user_id = ?", "si", [$hashed_password, $user_id]);
 
-        if (mysqli_query($conn, $query)) {
+        if ($update_success) {
             $success = 'รีเซ็ตรหัสผ่านเรียบร้อยแล้ว';
 
             // ดึงข้อมูลผู้ใช้
-            $query = "SELECT username, fullname FROM users WHERE user_id = '$user_id'";
-            $result = mysqli_query($conn, $query);
+            $result = db_select("SELECT username, fullname FROM users WHERE user_id = ?", "i", [$user_id]);
             $user = mysqli_fetch_assoc($result);
 
             // ส่งการแจ้งเตือนไปยัง Telegram
             send_telegram_notification("<b>มีการรีเซ็ตรหัสผ่าน</b>\n\nรหัส: $user_id\nชื่อผู้ใช้: " . $user['username'] . "\nชื่อ-นามสกุล: " . $user['fullname'] . "\nรีเซ็ตโดย: " . $_SESSION['fullname'] . "\nเวลา: " . thai_date(date('Y-m-d H:i:s')));
         } else {
-            $error = 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน: ' . mysqli_error($conn);
+            $error = 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน';
         }
     }
 }
@@ -129,35 +130,34 @@ if (isset($_POST['delete_user'])) {
     if ($_SESSION['role'] == 'building_staff') {
         $error = 'คุณไม่มีสิทธิ์ลบผู้ใช้';
     } else {
-        $user_id = clean_input($_POST['user_id']);
+        $user_id = intval($_POST['user_id']);
 
         // ป้องกันการลบตัวเอง
         if ($user_id == $_SESSION['user_id']) {
             $error = 'ไม่สามารถลบบัญชีผู้ใช้ที่กำลังใช้งานอยู่ได้';
         } else {
             // ดึงข้อมูลผู้ใช้ก่อนลบ
-            $query = "SELECT username, fullname FROM users WHERE user_id = '$user_id'";
-            $result = mysqli_query($conn, $query);
+            $result = db_select("SELECT username, fullname FROM users WHERE user_id = ?", "i", [$user_id]);
             $user = mysqli_fetch_assoc($result);
 
             // ลบผู้ใช้
-            $query = "DELETE FROM users WHERE user_id = '$user_id'";
+            $delete_success = db_execute("DELETE FROM users WHERE user_id = ?", "i", [$user_id]);
 
-            if (mysqli_query($conn, $query)) {
+            if ($delete_success) {
                 $success = 'ลบผู้ใช้งานเรียบร้อยแล้ว';
 
                 // ส่งการแจ้งเตือนไปยัง Telegram
                 send_telegram_notification("<b>มีการลบผู้ใช้งาน</b>\n\nรหัส: $user_id\nชื่อผู้ใช้: " . $user['username'] . "\nชื่อ-นามสกุล: " . $user['fullname'] . "\nลบโดย: " . $_SESSION['fullname'] . "\nเวลา: " . thai_date(date('Y-m-d H:i:s')));
             } else {
-                $error = 'เกิดข้อผิดพลาดในการลบผู้ใช้งาน: ' . mysqli_error($conn);
+                $error = 'เกิดข้อผิดพลาดในการลบผู้ใช้งาน';
             }
         }
     }
 }
 
 // ดึงข้อมูลผู้ใช้ทั้งหมด
-$query = "SELECT * FROM users ORDER BY role, fullname";
-$users = mysqli_query($conn, $query);
+$users = db_select("SELECT * FROM users ORDER BY role, fullname");
+
 
 // แสดงหน้าเว็บ
 include 'includes/header.php';
@@ -168,9 +168,11 @@ include 'includes/header.php';
     <h1 class="h3 mb-0 text-gray-800">
         <i class="bx bx-user me-2"></i>จัดการผู้ใช้งาน
     </h1>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-        <i class="bx bx-user-plus me-1"></i>เพิ่มผู้ใช้ใหม่
-    </button>
+    <?php if ($_SESSION['role'] != 'building_staff'): ?>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <i class="bx bx-user-plus me-1"></i>เพิ่มผู้ใช้ใหม่
+        </button>
+    <?php endif; ?>
 </div>
 
 <!-- แสดงข้อความแจ้งเตือน -->

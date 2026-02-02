@@ -21,18 +21,21 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     exit();
 }
 
-$request_id = clean_input($_GET['id']);
+$request_id = intval($_GET['id']);
 
 // ดึงข้อมูลรายการแจ้งซ่อม
-$query = "SELECT r.*, c.category_name, u.fullname as requester_name, u.email as requester_email, u.department as requester_department, u.phone as requester_phone 
-          FROM repair_requests r 
-          JOIN categories c ON r.category_id = c.category_id 
-          JOIN users u ON r.user_id = u.user_id 
-          WHERE r.request_id = '$request_id'";
-$result = mysqli_query($conn, $query);
+$result = db_select(
+    "SELECT r.*, c.category_name, u.fullname as requester_name, u.email as requester_email, u.department as requester_department, u.phone as requester_phone 
+     FROM repair_requests r 
+     JOIN categories c ON r.category_id = c.category_id 
+     JOIN users u ON r.user_id = u.user_id 
+     WHERE r.request_id = ?",
+    "i",
+    [$request_id]
+);
 
 // ตรวจสอบว่ามีข้อมูลหรือไม่
-if (mysqli_num_rows($result) == 0) {
+if (!$result || mysqli_num_rows($result) == 0) {
     if (in_array($_SESSION['role'], ['admin', 'building_staff'])) {
         header('Location: admin_requests.php');
     } else {
@@ -51,20 +54,8 @@ if (!in_array($_SESSION['role'], ['admin', 'building_staff']) && $request['user_
 
 // อัพเดตสถานะรายการแจ้งซ่อม (สำหรับแอดมิน)
 if (in_array($_SESSION['role'], ['admin', 'building_staff']) && isset($_POST['update_status'])) {
-    $new_status = clean_input($_POST['new_status']);
-    $admin_remark = clean_input($_POST['admin_remark']);
-
-    // อัพเดตสถานะในฐานข้อมูล
-    $query = "UPDATE repair_requests SET 
-              status = '$new_status', 
-              admin_remark = '$admin_remark'";
-
-    // ถ้าสถานะเป็น 'completed' ให้บันทึกวันที่เสร็จสิ้น
-    if ($new_status == 'completed') {
-        $query .= ", completed_date = NOW()";
-    }
-
-    $query .= " WHERE request_id = '$request_id'";
+    $new_status = trim($_POST['new_status']);
+    $admin_remark = trim($_POST['admin_remark']);
 
     // อัพโหลดรูปภาพ
     $file_path = "";
@@ -92,7 +83,22 @@ if (in_array($_SESSION['role'], ['admin', 'building_staff']) && isset($_POST['up
         }
     }
 
-    if (mysqli_query($conn, $query)) {
+    // อัพเดตสถานะในฐานข้อมูล
+    if ($new_status == 'completed') {
+        $update_success = db_execute(
+            "UPDATE repair_requests SET status = ?, admin_remark = ?, completed_date = NOW() WHERE request_id = ?",
+            "ssi",
+            [$new_status, $admin_remark, $request_id]
+        );
+    } else {
+        $update_success = db_execute(
+            "UPDATE repair_requests SET status = ?, admin_remark = ? WHERE request_id = ?",
+            "ssi",
+            [$new_status, $admin_remark, $request_id]
+        );
+    }
+
+    if ($update_success) {
         // บันทึกประวัติการอัพเดท
         insert_request_history($request_id, $_SESSION['user_id'], $new_status, $admin_remark, $file_path);
 
@@ -125,26 +131,32 @@ if (in_array($_SESSION['role'], ['admin', 'building_staff']) && isset($_POST['up
         $success = 'อัพเดตสถานะรายการแจ้งซ่อมเรียบร้อยแล้ว';
 
         // ดึงข้อมูลรายการแจ้งซ่อมอีกครั้งเพื่ออัพเดตข้อมูลที่แสดง
-        $query = "SELECT r.*, c.category_name, u.fullname as requester_name, u.email as requester_email, u.department as requester_department, u.phone as requester_phone 
-                  FROM repair_requests r 
-                  JOIN categories c ON r.category_id = c.category_id 
-                  JOIN users u ON r.user_id = u.user_id 
-                  WHERE r.request_id = '$request_id'";
-        $result = mysqli_query($conn, $query);
+        $result = db_select(
+            "SELECT r.*, c.category_name, u.fullname as requester_name, u.email as requester_email, u.department as requester_department, u.phone as requester_phone 
+             FROM repair_requests r 
+             JOIN categories c ON r.category_id = c.category_id 
+             JOIN users u ON r.user_id = u.user_id 
+             WHERE r.request_id = ?",
+            "i",
+            [$request_id]
+        );
         $request = mysqli_fetch_assoc($result);
     } else {
-        $error = 'เกิดข้อผิดพลาดในการอัพเดตสถานะ: ' . mysqli_error($conn);
+        $error = 'เกิดข้อผิดพลาดในการอัพเดตสถานะ';
     }
 }
 
 
 // ดึงข้อมูลประวัติการอัพเดท
-$query = "SELECT h.*, u.fullname 
-          FROM request_history h 
-          JOIN users u ON h.user_id = u.user_id 
-          WHERE h.request_id = '$request_id' 
-          ORDER BY h.created_at DESC";
-$history_result = mysqli_query($conn, $query);
+$history_result = db_select(
+    "SELECT h.*, u.fullname 
+     FROM request_history h 
+     JOIN users u ON h.user_id = u.user_id 
+     WHERE h.request_id = ? 
+     ORDER BY h.created_at DESC",
+    "i",
+    [$request_id]
+);
 
 // แสดงหน้าเว็บ
 include 'includes/header.php';
@@ -156,6 +168,7 @@ include 'includes/header.php';
         <i class="bx bx-detail me-2"></i>รายละเอียดการแจ้งซ่อม #<?php echo $request_id; ?>
     </h1>
     <div>
+       
         <?php if (in_array($_SESSION['role'], ['admin', 'building_staff'])): ?>
             <a href="admin_requests.php" class="btn btn-secondary">
                 <i class="bx bx-arrow-back me-1"></i>กลับ
@@ -163,6 +176,9 @@ include 'includes/header.php';
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
                 <i class="bx bx-edit me-1"></i>อัพเดตสถานะ
             </button>
+             <a href="print_request.php?id=<?php echo $request_id; ?>" class="btn btn-danger" target="_blank">
+            <i class="bx bxs-file-pdf me-1"></i>รายงาน PDF
+        </a>
         <?php else: ?>
             <a href="my_requests.php" class="btn btn-secondary">
                 <i class="bx bx-arrow-back me-1"></i>กลับ
@@ -317,12 +333,15 @@ include 'includes/header.php';
                 <div class="timeline p-3">
                     <?php
                     // ดึงข้อมูลประวัติพร้อมรูปภาพ เรียงจากล่าสุดก่อน
-                    $history_query = "SELECT h.*, u.fullname 
-                                  FROM request_history h 
-                                  LEFT JOIN users u ON h.user_id = u.user_id 
-                                  WHERE h.request_id = '$request_id' 
-                                  ORDER BY h.created_at DESC";
-                    $history_result = mysqli_query($conn, $history_query);
+                    $history_result = db_select(
+                        "SELECT h.*, u.fullname 
+                         FROM request_history h 
+                         LEFT JOIN users u ON h.user_id = u.user_id 
+                         WHERE h.request_id = ? 
+                         ORDER BY h.created_at DESC",
+                        "i",
+                        [$request_id]
+                    );
 
                     if (mysqli_num_rows($history_result) > 0):
                         while ($history = mysqli_fetch_assoc($history_result)):

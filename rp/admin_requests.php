@@ -13,33 +13,39 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'buil
 
 // อัพเดตสถานะรายการแจ้งซ่อม
 if (isset($_POST['update_status'])) {
-    $request_id = clean_input($_POST['request_id']);
-    $new_status = clean_input($_POST['new_status']);
-    $admin_remark = clean_input($_POST['admin_remark']);
+    $request_id = intval($_POST['request_id']);
+    $new_status = trim($_POST['new_status']);
+    $admin_remark = trim($_POST['admin_remark']);
 
     // อัพเดตสถานะในฐานข้อมูล
-    $query = "UPDATE repair_requests SET 
-              status = '$new_status', 
-              admin_remark = '$admin_remark'";
-
-    // ถ้าสถานะเป็น 'completed' ให้บันทึกวันที่เสร็จสิ้น
     if ($new_status == 'completed') {
-        $query .= ", completed_date = NOW()";
+        $update_success = db_execute(
+            "UPDATE repair_requests SET status = ?, admin_remark = ?, completed_date = NOW() WHERE request_id = ?",
+            "ssi",
+            [$new_status, $admin_remark, $request_id]
+        );
+    } else {
+        $update_success = db_execute(
+            "UPDATE repair_requests SET status = ?, admin_remark = ? WHERE request_id = ?",
+            "ssi",
+            [$new_status, $admin_remark, $request_id]
+        );
     }
 
-    $query .= " WHERE request_id = '$request_id'";
-
-    if (mysqli_query($conn, $query)) {
+    if ($update_success) {
         // บันทึกประวัติการอัพเดท
         add_request_history($request_id, $_SESSION['user_id'], $new_status, $admin_remark);
 
         // ดึงข้อมูลรายการแจ้งซ่อม
-        $query = "SELECT r.*, u.fullname, u.email, c.category_name 
-                  FROM repair_requests r 
-                  JOIN users u ON r.user_id = u.user_id 
-                  JOIN categories c ON r.category_id = c.category_id 
-                  WHERE r.request_id = '$request_id'";
-        $result = mysqli_query($conn, $query);
+        $result = db_select(
+            "SELECT r.*, u.fullname, u.email, c.category_name 
+             FROM repair_requests r 
+             JOIN users u ON r.user_id = u.user_id 
+             JOIN categories c ON r.category_id = c.category_id 
+             WHERE r.request_id = ?",
+            "i",
+            [$request_id]
+        );
         $request = mysqli_fetch_assoc($result);
 
         // ส่งการแจ้งเตือนไปยัง Telegram
@@ -70,39 +76,47 @@ if (isset($_POST['update_status'])) {
 
         $success = 'อัพเดตสถานะรายการแจ้งซ่อมเรียบร้อยแล้ว';
     } else {
-        $error = 'เกิดข้อผิดพลาดในการอัพเดตสถานะ: ' . mysqli_error($conn);
+        $error = 'เกิดข้อผิดพลาดในการอัพเดตสถานะ';
     }
 }
 
 // ดึงข้อมูลรายการแจ้งซ่อมทั้งหมด
-$status_filter = isset($_GET['status']) ? clean_input($_GET['status']) : '';
-$category_filter = isset($_GET['category']) ? clean_input($_GET['category']) : '';
-$date_filter = isset($_GET['date']) ? clean_input($_GET['date']) : '';
+$status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
+$category_filter = isset($_GET['category']) ? intval($_GET['category']) : 0;
+$date_filter = isset($_GET['date']) ? trim($_GET['date']) : '';
 
+// สร้าง query ด้วย prepared statement
 $query = "SELECT r.*, c.category_name, u.fullname as requester_name 
           FROM repair_requests r 
           JOIN categories c ON r.category_id = c.category_id 
           JOIN users u ON r.user_id = u.user_id 
           WHERE 1=1";
+$types = "";
+$params = [];
 
 if ($status_filter) {
-    $query .= " AND r.status = '$status_filter'";
+    $query .= " AND r.status = ?";
+    $types .= "s";
+    $params[] = $status_filter;
 }
 
 if ($category_filter) {
-    $query .= " AND r.category_id = '$category_filter'";
+    $query .= " AND r.category_id = ?";
+    $types .= "i";
+    $params[] = $category_filter;
 }
 
 if ($date_filter) {
-    $query .= " AND DATE(r.created_at) = '$date_filter'";
+    $query .= " AND DATE(r.created_at) = ?";
+    $types .= "s";
+    $params[] = $date_filter;
 }
 
 $query .= " ORDER BY r.created_at DESC";
-$requests = mysqli_query($conn, $query);
+$requests = db_select($query, $types, $params);
 
 // ดึงข้อมูลหมวดหมู่
-$query = "SELECT * FROM categories ORDER BY category_name";
-$categories = mysqli_query($conn, $query);
+$categories = db_select("SELECT * FROM categories ORDER BY category_name");
 
 // แสดงหน้าเว็บ
 include 'includes/header.php';

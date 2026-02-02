@@ -38,27 +38,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร';
     } else {
         // ตรวจสอบว่าชื่อผู้ใช้ซ้ำหรือไม่
-        $query = "SELECT * FROM users WHERE username = '$username'";
-        $result = mysqli_query($conn, $query);
+        $result = db_select("SELECT * FROM users WHERE username = ?", "s", [$username]);
 
-        if (mysqli_num_rows($result) > 0) {
+        if ($result && mysqli_num_rows($result) > 0) {
             $error = 'ชื่อผู้ใช้นี้มีในระบบแล้ว กรุณาใช้ชื่อผู้ใช้อื่น';
         } else {
             // ตรวจสอบว่าอีเมลซ้ำหรือไม่
-            $query = "SELECT * FROM users WHERE email = '$email'";
-            $result = mysqli_query($conn, $query);
+            $result = db_select("SELECT * FROM users WHERE email = ?", "s", [$email]);
 
-            if (mysqli_num_rows($result) > 0) {
+            if ($result && mysqli_num_rows($result) > 0) {
                 $error = 'อีเมลนี้มีในระบบแล้ว กรุณาใช้อีเมลอื่น';
             } else {
                 // เข้ารหัสรหัสผ่าน
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
                 // บันทึกข้อมูลลงในฐานข้อมูล
-                $query = "INSERT INTO users (username, password, fullname, email, department, phone, role) 
-                          VALUES ('$username', '$hashed_password', '$fullname', '$email', '$department', '$phone', 'user')";
+                $insert_id = db_insert(
+                    "INSERT INTO users (username, password, fullname, email, department, phone, role) VALUES (?, ?, ?, ?, ?, ?, 'user')",
+                    "ssssss",
+                    [$username, $hashed_password, $fullname, $email, $department, $phone]
+                );
 
-                if (mysqli_query($conn, $query)) {
+                if ($insert_id) {
                     // สมัครสมาชิกสำเร็จ
                     $success = 'สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่านของคุณ';
 
@@ -68,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     // รีเซ็ตฟอร์ม
                     $username = $fullname = $email = $department = $phone = '';
                 } else {
-                    $error = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . mysqli_error($conn);
+                    $error = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
                 }
             }
         }

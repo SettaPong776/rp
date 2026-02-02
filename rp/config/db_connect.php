@@ -20,9 +20,11 @@ if (!$conn) {
 mysqli_set_charset($conn, "utf8mb4");
 
 // ฟังก์ชันสำหรับการแปลงวันที่เป็นรูปแบบไทย
-function thai_date($datetime, $format = 'j F Y เวลา H:i น.') {
-    if (!$datetime) return "";
-    
+function thai_date($datetime, $format = 'j F Y เวลา H:i น.')
+{
+    if (!$datetime)
+        return "";
+
     $thai_month_arr = array(
         "0" => "",
         "1" => "มกราคม",
@@ -38,52 +40,146 @@ function thai_date($datetime, $format = 'j F Y เวลา H:i น.') {
         "11" => "พฤศจิกายน",
         "12" => "ธันวาคม"
     );
-    
+
     $timestamp = strtotime($datetime);
-    
+
     $thai_date_return = date("j", $timestamp);
     $thai_date_return .= " " . $thai_month_arr[date("n", $timestamp)];
     $thai_date_return .= " " . (date("Y", $timestamp) + 543);
-    
+
     if (strpos($format, 'H:i') !== false) {
         $thai_date_return .= " เวลา " . date("H:i", $timestamp) . " น.";
     }
-    
+
     return $thai_date_return;
 }
 
-// ฟังก์ชันสำหรับกรองข้อมูลที่รับมาจากฟอร์ม
-function clean_input($data) {
-    global $conn;
+// ฟังก์ชันสำหรับกรองข้อมูลที่รับมาจากฟอร์ม (สำหรับ display เท่านั้น)
+function clean_input($data)
+{
     $data = trim($data);
     $data = stripslashes($data);
-    $data = htmlspecialchars($data);
-    $data = mysqli_real_escape_string($conn, $data);
+    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
     return $data;
 }
 
-// ฟังก์ชันสำหรับส่งการแจ้งเตือนผ่าน Telegram
-function send_telegram_notification($message) {
+/**
+ * Execute a prepared statement SELECT query and return the result
+ * @param string $query SQL query with ? placeholders
+ * @param string $types Parameter types (s=string, i=integer, d=double, b=blob)
+ * @param array $params Array of parameters to bind
+ * @return mysqli_result|false Query result or false on failure
+ */
+function db_select($query, $types = "", $params = [])
+{
     global $conn;
-    
+
+    $stmt = mysqli_prepare($conn, $query);
+    if (!$stmt) {
+        error_log("Prepare failed: " . mysqli_error($conn));
+        return false;
+    }
+
+    if (!empty($types) && !empty($params)) {
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
+    }
+
+    if (!mysqli_stmt_execute($stmt)) {
+        error_log("Execute failed: " . mysqli_stmt_error($stmt));
+        mysqli_stmt_close($stmt);
+        return false;
+    }
+
+    $result = mysqli_stmt_get_result($stmt);
+    return $result;
+}
+
+/**
+ * Execute a prepared statement INSERT/UPDATE/DELETE query
+ * @param string $query SQL query with ? placeholders
+ * @param string $types Parameter types (s=string, i=integer, d=double, b=blob)
+ * @param array $params Array of parameters to bind
+ * @return bool True on success, false on failure
+ */
+function db_execute($query, $types = "", $params = [])
+{
+    global $conn;
+
+    $stmt = mysqli_prepare($conn, $query);
+    if (!$stmt) {
+        error_log("Prepare failed: " . mysqli_error($conn));
+        return false;
+    }
+
+    if (!empty($types) && !empty($params)) {
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
+    }
+
+    $success = mysqli_stmt_execute($stmt);
+    if (!$success) {
+        error_log("Execute failed: " . mysqli_stmt_error($stmt));
+    }
+
+    mysqli_stmt_close($stmt);
+    return $success;
+}
+
+/**
+ * Execute a prepared statement INSERT and return the insert ID
+ * @param string $query SQL query with ? placeholders
+ * @param string $types Parameter types (s=string, i=integer, d=double, b=blob)
+ * @param array $params Array of parameters to bind
+ * @return int|false Insert ID on success, false on failure
+ */
+function db_insert($query, $types = "", $params = [])
+{
+    global $conn;
+
+    $stmt = mysqli_prepare($conn, $query);
+    if (!$stmt) {
+        error_log("Prepare failed: " . mysqli_error($conn));
+        return false;
+    }
+
+    if (!empty($types) && !empty($params)) {
+        mysqli_stmt_bind_param($stmt, $types, ...$params);
+    }
+
+    if (!mysqli_stmt_execute($stmt)) {
+        error_log("Execute failed: " . mysqli_stmt_error($stmt));
+        mysqli_stmt_close($stmt);
+        return false;
+    }
+
+    $insert_id = mysqli_insert_id($conn);
+    mysqli_stmt_close($stmt);
+
+    return $insert_id;
+}
+
+// ฟังก์ชันสำหรับส่งการแจ้งเตือนผ่าน Telegram
+function send_telegram_notification($message)
+{
+    global $conn;
+
     // ดึงข้อมูลการตั้งค่า Telegram
     $query = "SELECT setting_value FROM settings WHERE setting_name = 'telegram_bot_token'";
     $result = mysqli_query($conn, $query);
     $token = mysqli_fetch_assoc($result)['setting_value'];
-    
+
     $query = "SELECT setting_value FROM settings WHERE setting_name = 'telegram_chat_id'";
     $result = mysqli_query($conn, $query);
     $chat_id = mysqli_fetch_assoc($result)['setting_value'];
-    
+
     $query = "SELECT setting_value FROM settings WHERE setting_name = 'notification_enabled'";
     $result = mysqli_query($conn, $query);
     $notification_enabled = mysqli_fetch_assoc($result)['setting_value'];
-    
+
     // ตรวจสอบว่าเปิดใช้งานการแจ้งเตือนหรือไม่
     if ($notification_enabled !== 'true' || empty($token) || empty($chat_id)) {
         return false;
     }
-    
+
     // ส่งข้อความผ่าน Telegram Bot API
     $url = "https://api.telegram.org/bot" . $token . "/sendMessage";
     $data = [
@@ -91,7 +187,7 @@ function send_telegram_notification($message) {
         'text' => $message,
         'parse_mode' => 'HTML'
     ];
-    
+
     // ใช้ cURL สำหรับการส่ง POST request
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -99,23 +195,20 @@ function send_telegram_notification($message) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
     $response = curl_exec($ch);
     curl_close($ch);
-    
+
     return ($response !== false);
 }
 
 // ฟังก์ชันสำหรับบันทึกประวัติการอัพเดท
-function add_request_history($request_id, $user_id, $status, $remark = '') {
-    global $conn;
-    
-    $remark = clean_input($remark);
-    
-    $query = "INSERT INTO request_history (request_id, user_id, status, remark) 
-              VALUES ('$request_id', '$user_id', '$status', '$remark')";
-    return mysqli_query($conn, $query);
+function add_request_history($request_id, $user_id, $status, $remark = '')
+{
+    $query = "INSERT INTO request_history (request_id, user_id, status, remark) VALUES (?, ?, ?, ?)";
+    return db_execute($query, "iiss", [$request_id, $user_id, $status, $remark]);
 }
 
 // ฟังก์ชันแสดงข้อความแจ้งเตือน
-function show_alert($message, $type = 'success') {
+function show_alert($message, $type = 'success')
+{
     return "<div class='alert alert-$type alert-dismissible fade show' role='alert'>
                 $message
                 <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
@@ -123,17 +216,8 @@ function show_alert($message, $type = 'success') {
 }
 
 
-function insert_request_history($request_id, $user_id, $status, $remark = '', $image_path = '') {
-    global $conn;
-    
-    // ทำความสะอาดข้อมูล
-    $remark = clean_input($remark);
-    $status = clean_input($status);
-    $image_path = clean_input($image_path);
-    
-    // คำสั่ง SQL สำหรับบันทึกข้อมูลใหม่
-    $query = "INSERT INTO request_history (request_id, user_id, status, remark, image) 
-              VALUES ('$request_id', '$user_id', '$status', '$remark', '$image_path')";
-    
-    return mysqli_query($conn, $query);
+function insert_request_history($request_id, $user_id, $status, $remark = '', $image_path = '')
+{
+    $query = "INSERT INTO request_history (request_id, user_id, status, remark, image) VALUES (?, ?, ?, ?, ?)";
+    return db_execute($query, "iisss", [$request_id, $user_id, $status, $remark, $image_path]);
 }

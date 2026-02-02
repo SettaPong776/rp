@@ -39,10 +39,14 @@ if (isset($_POST['export_excel'])) {
 
     $where_clause = implode(' AND ', $where_conditions);
 
-    // สร้าง query สำหรับดึงข้อมูล
+    // สร้าง query สำหรับดึงข้อมูล พร้อมดึงชื่อผู้ที่อัพเดทสถานะเป็นเสร็จสิ้น
     $query = "SELECT r.request_id, r.title, r.description, r.location, r.priority, r.status, 
               c.category_name, u.fullname as requester_name, u.department, 
-              r.created_at, r.completed_date, r.admin_remark
+              r.created_at, r.completed_date, r.admin_remark,
+              (SELECT u2.fullname FROM request_history h 
+               JOIN users u2 ON h.user_id = u2.user_id 
+               WHERE h.request_id = r.request_id AND h.status = 'completed' 
+               ORDER BY h.created_at DESC LIMIT 1) as completed_by_user
               FROM repair_requests r 
               JOIN categories c ON r.category_id = c.category_id 
               JOIN users u ON r.user_id = u.user_id 
@@ -78,6 +82,7 @@ if (isset($_POST['export_excel'])) {
     echo '<th style="background-color: #f2f2f2;">วันที่แจ้ง</th>';
     echo '<th style="background-color: #f2f2f2;">วันที่เสร็จสิ้น</th>';
     echo '<th style="background-color: #f2f2f2;">หมายเหตุ</th>';
+    echo '<th style="background-color: #f2f2f2;">ผู้ดำเนินการ</th>';
     echo '</tr>';
 
     // แสดงข้อมูล
@@ -131,6 +136,7 @@ if (isset($_POST['export_excel'])) {
             echo '<td>' . thai_date($row['created_at'], 'j F Y H:i') . '</td>';
             echo '<td>' . ($row['completed_date'] ? thai_date($row['completed_date'], 'j F Y H:i') : '-') . '</td>';
             echo '<td>' . ($row['admin_remark'] ?: '-') . '</td>';
+            echo '<td>' . ($row['completed_by_user'] ?: '-') . '</td>';
             echo '</tr>';
         }
     } else {

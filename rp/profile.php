@@ -13,44 +13,40 @@ if (!isset($_SESSION['user_id'])) {
 
 // ดึงข้อมูลผู้ใช้
 $user_id = $_SESSION['user_id'];
-$query = "SELECT * FROM users WHERE user_id = '$user_id'";
-$result = mysqli_query($conn, $query);
+$result = db_select("SELECT * FROM users WHERE user_id = ?", "i", [$user_id]);
 $user = mysqli_fetch_assoc($result);
 
 // จัดการการแก้ไขข้อมูลส่วนตัว
 if (isset($_POST['update_profile'])) {
-    $fullname = clean_input($_POST['fullname']);
-    $email = clean_input($_POST['email']);
-    $department = clean_input($_POST['department']);
-    $phone = clean_input($_POST['phone']);
-    
+    $fullname = trim($_POST['fullname']);
+    $email = trim($_POST['email']);
+    $department = trim($_POST['department']);
+    $phone = trim($_POST['phone']);
+
     // ตรวจสอบว่าอีเมลซ้ำหรือไม่ (ยกเว้นผู้ใช้ปัจจุบัน)
-    $query = "SELECT * FROM users WHERE email = '$email' AND user_id != '$user_id'";
-    $result = mysqli_query($conn, $query);
-    
-    if (mysqli_num_rows($result) > 0) {
+    $result = db_select("SELECT * FROM users WHERE email = ? AND user_id != ?", "si", [$email, $user_id]);
+
+    if ($result && mysqli_num_rows($result) > 0) {
         $error = 'อีเมลนี้มีในระบบแล้ว กรุณาใช้อีเมลอื่น';
     } else {
         // อัพเดตข้อมูลผู้ใช้
-        $query = "UPDATE users SET 
-                  fullname = '$fullname', 
-                  email = '$email', 
-                  department = '$department', 
-                  phone = '$phone' 
-                  WHERE user_id = '$user_id'";
-        
-        if (mysqli_query($conn, $query)) {
+        $update_success = db_execute(
+            "UPDATE users SET fullname = ?, email = ?, department = ?, phone = ? WHERE user_id = ?",
+            "ssssi",
+            [$fullname, $email, $department, $phone, $user_id]
+        );
+
+        if ($update_success) {
             // อัพเดตข้อมูลใน session
             $_SESSION['fullname'] = $fullname;
-            
+
             $success = 'อัพเดตข้อมูลส่วนตัวเรียบร้อยแล้ว';
-            
+
             // ดึงข้อมูลผู้ใช้อีกครั้ง
-            $query = "SELECT * FROM users WHERE user_id = '$user_id'";
-            $result = mysqli_query($conn, $query);
+            $result = db_select("SELECT * FROM users WHERE user_id = ?", "i", [$user_id]);
             $user = mysqli_fetch_assoc($result);
         } else {
-            $error = 'เกิดข้อผิดพลาดในการอัพเดตข้อมูล: ' . mysqli_error($conn);
+            $error = 'เกิดข้อผิดพลาดในการอัพเดตข้อมูล';
         }
     }
 }
@@ -60,7 +56,7 @@ if (isset($_POST['change_password'])) {
     $current_password = $_POST['current_password'];
     $new_password = $_POST['new_password'];
     $confirm_password = $_POST['confirm_password'];
-    
+
     // ตรวจสอบรหัสผ่านปัจจุบัน
     if (!password_verify($current_password, $user['password'])) {
         $error_password = 'รหัสผ่านปัจจุบันไม่ถูกต้อง';
@@ -71,28 +67,31 @@ if (isset($_POST['change_password'])) {
     } else {
         // เข้ารหัสรหัสผ่านใหม่
         $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-        
+
         // อัพเดตรหัสผ่าน
-        $query = "UPDATE users SET password = '$hashed_password' WHERE user_id = '$user_id'";
-        
-        if (mysqli_query($conn, $query)) {
+        $update_success = db_execute("UPDATE users SET password = ? WHERE user_id = ?", "si", [$hashed_password, $user_id]);
+
+        if ($update_success) {
             $success_password = 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว';
         } else {
-            $error_password = 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน: ' . mysqli_error($conn);
+            $error_password = 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน';
         }
     }
 }
 
 // ดึงข้อมูลสถิติรายการแจ้งซ่อมของผู้ใช้
-$query = "SELECT 
-            COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
-            COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress_count,
-            COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count,
-            COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected_count,
-            COUNT(*) as total_count
-          FROM repair_requests 
-          WHERE user_id = '$user_id'";
-$result = mysqli_query($conn, $query);
+$result = db_select(
+    "SELECT 
+        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
+        COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress_count,
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count,
+        COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected_count,
+        COUNT(*) as total_count
+     FROM repair_requests 
+     WHERE user_id = ?",
+    "i",
+    [$user_id]
+);
 $request_stats = mysqli_fetch_assoc($result);
 
 // แสดงหน้าเว็บ
@@ -127,10 +126,11 @@ include 'includes/header.php';
         <!-- ข้อมูลส่วนตัวโดยย่อ -->
         <div class="card shadow mb-4">
             <div class="card-body text-center">
-                <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($user['fullname']); ?>&background=random" alt="User Avatar" class="rounded-circle mb-3" width="150" height="150">
+                <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($user['fullname']); ?>&background=random"
+                    alt="User Avatar" class="rounded-circle mb-3" width="150" height="150">
                 <h4 class="fw-bold"><?php echo $user['fullname']; ?></h4>
                 <p class="text-muted"><?php echo $user['role'] == 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งานทั่วไป'; ?></p>
-                
+
                 <div class="d-flex justify-content-center">
                     <div class="text-center px-3">
                         <h5 class="mb-0"><?php echo $request_stats['total_count']; ?></h5>
@@ -145,35 +145,35 @@ include 'includes/header.php';
                         <small class="text-muted">รอดำเนินการ</small>
                     </div>
                 </div>
-                
+
                 <hr>
-                
+
                 <div class="d-flex align-items-center justify-content-center mb-2">
                     <i class="bx bx-envelope me-2 text-primary"></i>
                     <span><?php echo $user['email']; ?></span>
                 </div>
-                
+
                 <?php if ($user['phone']): ?>
                     <div class="d-flex align-items-center justify-content-center mb-2">
                         <i class="bx bx-phone me-2 text-primary"></i>
                         <span><?php echo $user['phone']; ?></span>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if ($user['department']): ?>
                     <div class="d-flex align-items-center justify-content-center mb-2">
                         <i class="bx bx-building me-2 text-primary"></i>
                         <span><?php echo $user['department']; ?></span>
                     </div>
                 <?php endif; ?>
-                
+
                 <div class="d-flex align-items-center justify-content-center">
                     <i class="bx bx-calendar me-2 text-primary"></i>
                     <span>สมัครสมาชิกเมื่อ: <?php echo thai_date($user['created_at'], 'j F Y'); ?></span>
                 </div>
             </div>
         </div>
-        
+
         <!-- สถิติการแจ้งซ่อม -->
         <div class="card shadow mb-4">
             <div class="card-header bg-white py-3">
@@ -186,19 +186,21 @@ include 'includes/header.php';
             </div>
         </div>
     </div>
-    
+
     <div class="col-lg-8">
         <!-- แท็บเมนู -->
         <div class="card shadow mb-4">
             <div class="card-header bg-white py-3">
                 <ul class="nav nav-tabs card-header-tabs" id="profileTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="true">
+                        <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile"
+                            type="button" role="tab" aria-controls="profile" aria-selected="true">
                             <i class="bx bx-user me-1"></i>ข้อมูลส่วนตัว
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="password-tab" data-bs-toggle="tab" data-bs-target="#password" type="button" role="tab" aria-controls="password" aria-selected="false">
+                        <button class="nav-link" id="password-tab" data-bs-toggle="tab" data-bs-target="#password"
+                            type="button" role="tab" aria-controls="password" aria-selected="false">
                             <i class="bx bx-lock-alt me-1"></i>เปลี่ยนรหัสผ่าน
                         </button>
                     </li>
@@ -215,17 +217,20 @@ include 'includes/header.php';
                                     <span class="input-group-text bg-light">
                                         <i class="bx bx-user"></i>
                                     </span>
-                                    <input type="text" class="form-control" id="username" value="<?php echo $user['username']; ?>" readonly>
+                                    <input type="text" class="form-control" id="username"
+                                        value="<?php echo $user['username']; ?>" readonly>
                                 </div>
                                 <small class="text-muted">ไม่สามารถเปลี่ยนชื่อผู้ใช้ได้</small>
                             </div>
                             <div class="col-md-6">
-                                <label for="fullname" class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+                                <label for="fullname" class="form-label">ชื่อ-นามสกุล <span
+                                        class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
                                         <i class="bx bx-id-card"></i>
                                     </span>
-                                    <input type="text" class="form-control" id="fullname" name="fullname" value="<?php echo $user['fullname']; ?>" required>
+                                    <input type="text" class="form-control" id="fullname" name="fullname"
+                                        value="<?php echo $user['fullname']; ?>" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -234,7 +239,8 @@ include 'includes/header.php';
                                     <span class="input-group-text bg-light">
                                         <i class="bx bx-envelope"></i>
                                     </span>
-                                    <input type="email" class="form-control" id="email" name="email" value="<?php echo $user['email']; ?>" required>
+                                    <input type="email" class="form-control" id="email" name="email"
+                                        value="<?php echo $user['email']; ?>" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -243,7 +249,8 @@ include 'includes/header.php';
                                     <span class="input-group-text bg-light">
                                         <i class="bx bx-building"></i>
                                     </span>
-                                    <input type="text" class="form-control" id="department" name="department" value="<?php echo $user['department']; ?>">
+                                    <input type="text" class="form-control" id="department" name="department"
+                                        value="<?php echo $user['department']; ?>">
                                 </div>
                             </div>
                             <div class="col-12">
@@ -252,7 +259,8 @@ include 'includes/header.php';
                                     <span class="input-group-text bg-light">
                                         <i class="bx bx-phone"></i>
                                     </span>
-                                    <input type="text" class="form-control" id="phone" name="phone" value="<?php echo $user['phone']; ?>">
+                                    <input type="text" class="form-control" id="phone" name="phone"
+                                        value="<?php echo $user['phone']; ?>">
                                 </div>
                             </div>
                             <div class="col-12 mt-4">
@@ -262,7 +270,7 @@ include 'includes/header.php';
                             </div>
                         </form>
                     </div>
-                    
+
                     <!-- แท็บเปลี่ยนรหัสผ่าน -->
                     <div class="tab-pane fade" id="password" role="tabpanel" aria-labelledby="password-tab">
                         <?php if (isset($success_password)): ?>
@@ -271,41 +279,47 @@ include 'includes/header.php';
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         <?php endif; ?>
-                        
+
                         <?php if (isset($error_password)): ?>
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                                 <i class="bx bx-error-circle me-1"></i><?php echo $error_password; ?>
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         <?php endif; ?>
-                        
+
                         <form method="POST" class="row g-3">
                             <div class="col-md-12">
-                                <label for="current_password" class="form-label">รหัสผ่านปัจจุบัน <span class="text-danger">*</span></label>
+                                <label for="current_password" class="form-label">รหัสผ่านปัจจุบัน <span
+                                        class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
                                         <i class="bx bx-lock"></i>
                                     </span>
-                                    <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                    <input type="password" class="form-control" id="current_password"
+                                        name="current_password" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label for="new_password" class="form-label">รหัสผ่านใหม่ <span class="text-danger">*</span></label>
+                                <label for="new_password" class="form-label">รหัสผ่านใหม่ <span
+                                        class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
                                         <i class="bx bx-lock-alt"></i>
                                     </span>
-                                    <input type="password" class="form-control" id="new_password" name="new_password" required>
+                                    <input type="password" class="form-control" id="new_password" name="new_password"
+                                        required>
                                 </div>
                                 <small class="text-muted">รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร</small>
                             </div>
                             <div class="col-md-6">
-                                <label for="confirm_password" class="form-label">ยืนยันรหัสผ่านใหม่ <span class="text-danger">*</span></label>
+                                <label for="confirm_password" class="form-label">ยืนยันรหัสผ่านใหม่ <span
+                                        class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-light">
                                         <i class="bx bx-lock-alt"></i>
                                     </span>
-                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                                    <input type="password" class="form-control" id="confirm_password"
+                                        name="confirm_password" required>
                                 </div>
                             </div>
                             <div class="col-12 mt-4">
@@ -318,7 +332,7 @@ include 'includes/header.php';
                 </div>
             </div>
         </div>
-        
+
         <!-- รายการแจ้งซ่อมล่าสุด -->
         <div class="card shadow mb-4">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
@@ -332,15 +346,18 @@ include 'includes/header.php';
             <div class="card-body">
                 <?php
                 // ดึงรายการแจ้งซ่อมล่าสุด 5 รายการ
-                $query = "SELECT r.*, c.category_name 
-                          FROM repair_requests r 
-                          JOIN categories c ON r.category_id = c.category_id 
-                          WHERE r.user_id = '$user_id' 
-                          ORDER BY r.created_at DESC 
-                          LIMIT 5";
-                $recent_requests = mysqli_query($conn, $query);
+                $recent_requests = db_select(
+                    "SELECT r.*, c.category_name 
+                     FROM repair_requests r 
+                     JOIN categories c ON r.category_id = c.category_id 
+                     WHERE r.user_id = ? 
+                     ORDER BY r.created_at DESC 
+                     LIMIT 5",
+                    "i",
+                    [$user_id]
+                );
                 ?>
-                
+
                 <?php if (mysqli_num_rows($recent_requests) > 0): ?>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
@@ -373,7 +390,8 @@ include 'includes/header.php';
                                         </td>
                                         <td><?php echo thai_date($request['created_at'], 'j M Y'); ?></td>
                                         <td>
-                                            <a href="view_request.php?id=<?php echo $request['request_id']; ?>" class="btn btn-sm btn-primary">
+                                            <a href="view_request.php?id=<?php echo $request['request_id']; ?>"
+                                                class="btn btn-sm btn-primary">
                                                 <i class="bx bx-show-alt"></i> ดูรายละเอียด
                                             </a>
                                         </td>
@@ -398,53 +416,53 @@ include 'includes/header.php';
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // สร้างแผนภูมิสถิติการแจ้งซ่อม
-    const requestCtx = document.getElementById('requestChart').getContext('2d');
-    const requestChart = new Chart(requestCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['รอดำเนินการ', 'กำลังดำเนินการ', 'เสร็จสิ้น', 'ยกเลิก'],
-            datasets: [{
-                data: [
-                    <?php echo $request_stats['pending_count']; ?>,
-                    <?php echo $request_stats['in_progress_count']; ?>,
-                    <?php echo $request_stats['completed_count']; ?>,
-                    <?php echo $request_stats['rejected_count']; ?>
-                ],
-                backgroundColor: [
-                    '#FFC107', // รอดำเนินการ
-                    '#0DCAF0', // กำลังดำเนินการ
-                    '#20C997', // เสร็จสิ้น
-                    '#DC3545'  // ยกเลิก
-                ],
-                borderWidth: 0,
-                hoverOffset: 15
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        font: {
-                            family: 'Prompt'
+    document.addEventListener('DOMContentLoaded', function () {
+        // สร้างแผนภูมิสถิติการแจ้งซ่อม
+        const requestCtx = document.getElementById('requestChart').getContext('2d');
+        const requestChart = new Chart(requestCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['รอดำเนินการ', 'กำลังดำเนินการ', 'เสร็จสิ้น', 'ยกเลิก'],
+                datasets: [{
+                    data: [
+                        <?php echo $request_stats['pending_count']; ?>,
+                        <?php echo $request_stats['in_progress_count']; ?>,
+                        <?php echo $request_stats['completed_count']; ?>,
+                        <?php echo $request_stats['rejected_count']; ?>
+                    ],
+                    backgroundColor: [
+                        '#FFC107', // รอดำเนินการ
+                        '#0DCAF0', // กำลังดำเนินการ
+                        '#20C997', // เสร็จสิ้น
+                        '#DC3545'  // ยกเลิก
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 15
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                family: 'Prompt'
+                            }
                         }
+                    },
+                    title: {
+                        display: false
                     }
                 },
-                title: {
-                    display: false
+                cutout: '65%',
+                animation: {
+                    animateScale: true
                 }
-            },
-            cutout: '65%',
-            animation: {
-                animateScale: true
             }
-        }
+        });
     });
-});
 </script>
 
 <?php

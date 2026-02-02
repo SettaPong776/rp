@@ -26,11 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (empty($username) || empty($password)) {
         $error = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน';
     } else {
-        // ค้นหาผู้ใช้ในฐานข้อมูล
-        $query = "SELECT * FROM users WHERE username = '$username'";
-        $result = mysqli_query($conn, $query);
+        // ค้นหาผู้ใช้ในฐานข้อมูล (ใช้ prepared statement)
+        $result = db_select("SELECT * FROM users WHERE username = ?", "s", [$username]);
 
-        if (mysqli_num_rows($result) > 0) {
+        if ($result && mysqli_num_rows($result) > 0) {
             $user = mysqli_fetch_assoc($result);
 
             // ตรวจสอบรหัสผ่าน
