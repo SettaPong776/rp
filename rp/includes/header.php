@@ -38,7 +38,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </title>
 
     <!-- Favicon -->
-    <link rel="shortcut icon" href="assets/images/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="assets/images/favicon.png" type="image/png">
+    <link rel="icon" href="assets/images/favicon.png" type="image/png">
 
     <!-- Google Fonts - Prompt -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -99,11 +100,13 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         .sidebar .logo-container .logo {
             color: white;
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             font-weight: 700;
             text-decoration: none;
             white-space: nowrap;
-            overflow: hidden;
+            overflow: visible;
+            display: flex;
+            align-items: center;
         }
 
         .sidebar .logo-container .toggle-btn {
@@ -240,7 +243,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <div class="sidebar" id="sidebar">
         <div class="logo-container">
             <a href="index.php" class="logo">
-                <i class="bx bx-wrench me-0"></i>
+                <img src="assets/images/favicon.png" alt="Logo"
+                    style="width: 35px; height: 35px; object-fit: contain; margin-right: 8px;">
                 <span class="logo-text">ระบบแจ้งซ่อม</span>
             </a>
             <button class="toggle-btn" id="sidebarToggle">

@@ -617,6 +617,8 @@ $status_bg = [
         <div class="header">
             <div class="header-content">
                 <div class="header-left">
+                    <img src="assets/images/favicon.png" alt="Logo"
+                        style="width: 55px; height: 55px; object-fit: contain;">
                     <div class="header-text">
                         <h1><?php echo $settings['site_name'] ?? 'ระบบแจ้งซ่อมออนไลน์'; ?></h1>
                         <div class="subtitle">เอกสารใบแจ้งซ่อม</div>
@@ -780,7 +782,8 @@ $status_bg = [
         <!-- Footer -->
         <div class="footer">
             <div class="footer-left">
-                <strong><?php echo $settings['site_name'] ?? 'ระบบแจ้งซ่อมออนไลน์'; ?></strong> | ใบแจ้งซ่อมเลขที่
+                <strong><?php echo $settings['site_name'] ?? 'ระบบแจ้งซ่อมออนไลน์'; ?> มหาวิทยาลัยราชภัฏเลย</strong> |
+                ใบแจ้งซ่อมเลขที่
                 <?php echo str_pad($request_id, 5, '0', STR_PAD_LEFT); ?>
             </div>
             <div class="footer-right">
@@ -812,8 +815,10 @@ $status_bg = [
             <div class="header">
                 <div class="header-content">
                     <div class="header-left">
+                        <img src="assets/images/favicon.png" alt="Logo"
+                            style="width: 55px; height: 55px; object-fit: contain;">
                         <div class="header-text">
-                            <h1>ภาคผนวก - รูปภาพประกอบ</h1>
+                            <h1>รูปภาพประกอบ</h1>
                             <div class="subtitle">ใบแจ้งซ่อมเลขที่ <?php echo str_pad($request_id, 5, '0', STR_PAD_LEFT); ?>
                             </div>
                         </div>
@@ -875,7 +880,8 @@ $status_bg = [
             <!-- Footer หน้า 2 -->
             <div class="footer">
                 <div class="footer-left">
-                    <strong><?php echo $settings['site_name'] ?? 'ระบบแจ้งซ่อมออนไลน์'; ?></strong> | ใบแจ้งซ่อมเลขที่
+                    <strong><?php echo $settings['site_name'] ?? 'ระบบแจ้งซ่อมออนไลน์'; ?> มหาวิทยาลัยราชภัฏเลย</strong> |
+                    ใบแจ้งซ่อมเลขที่
                     <?php echo str_pad($request_id, 5, '0', STR_PAD_LEFT); ?>
                 </div>
                 <div class="footer-right">
