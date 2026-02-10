@@ -4,9 +4,9 @@ session_start();
 
 // ตั้งค่าการเชื่อมต่อกับฐานข้อมูล
 $host = 'localhost';
-$user = 'root';
-$password = '';
-$database = 'nakaiact_testrp';
+$user = 'sql_help_lru_ac_th';
+$password = '1eaea28b2c477';
+$database = 'sql_help_lru_ac_th';
 
 // เชื่อมต่อกับฐานข้อมูล
 $conn = mysqli_connect($host, $user, $password, $database);
