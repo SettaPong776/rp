@@ -569,24 +569,261 @@ $status_bg = [
         /* Print Styles */
         @page {
             size: A4;
-            margin: 0;
+            margin: 5mm;
         }
 
         @media print {
+            * {
+                box-sizing: border-box !important;
+            }
+
             body {
                 background: #fff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                font-size: 12px !important;
+                line-height: 1.45 !important;
+                width: 100% !important;
             }
 
             .page {
-                width: 210mm;
-                min-height: 297mm;
-                margin: 0;
-                box-shadow: none;
-                page-break-inside: avoid;
+                width: 100% !important;
+                min-height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
             }
 
             .action-buttons {
                 display: none !important;
+            }
+
+            /* Reset responsive overrides for print */
+            .header {
+                padding: 10px 20px !important;
+            }
+
+            .header-content {
+                flex-direction: row !important;
+                align-items: center !important;
+            }
+
+            .header-left {
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 12px !important;
+            }
+
+            .header-left img {
+                width: 45px !important;
+                height: 45px !important;
+            }
+
+            .header-right {
+                text-align: right !important;
+            }
+
+            .header-text h1 {
+                font-size: 15px !important;
+            }
+
+            .header-text .subtitle {
+                font-size: 10px !important;
+            }
+
+            .header::after {
+                height: 2px !important;
+            }
+
+            .request-number {
+                font-size: 20px !important;
+            }
+
+            .print-date {
+                font-size: 9px !important;
+            }
+
+            .content {
+                padding: 12px 20px !important;
+                flex: 1 !important;
+            }
+
+            .document-title {
+                font-size: 14px !important;
+                margin-bottom: 10px !important;
+                padding-bottom: 6px !important;
+            }
+
+            .title-bar {
+                padding: 8px 12px !important;
+                margin-bottom: 10px !important;
+                flex-direction: row !important;
+                align-items: center !important;
+            }
+
+            .title-bar h2 {
+                font-size: 12px !important;
+                max-width: 60% !important;
+            }
+
+            .badge {
+                padding: 3px 10px !important;
+                font-size: 9px !important;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 10px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .card-header {
+                padding: 6px 10px !important;
+                gap: 7px !important;
+            }
+
+            .card-icon {
+                width: 18px !important;
+                height: 18px !important;
+                font-size: 9px !important;
+            }
+
+            .card-title {
+                font-size: 11px !important;
+            }
+
+            .card-body {
+                padding: 8px 10px !important;
+            }
+
+            .info-list {
+                gap: 5px !important;
+            }
+
+            .info-row {
+                padding-bottom: 4px !important;
+            }
+
+            .info-label {
+                width: 75px !important;
+                font-size: 10px !important;
+            }
+
+            .info-value {
+                font-size: 10px !important;
+            }
+
+            .avatar {
+                width: 30px !important;
+                height: 30px !important;
+                font-size: 12px !important;
+            }
+
+            .requester-info {
+                gap: 10px !important;
+            }
+
+            .requester-details h3 {
+                font-size: 11px !important;
+                margin-bottom: 2px !important;
+            }
+
+            .requester-details p {
+                font-size: 10px !important;
+                margin: 1px 0 !important;
+            }
+
+            .description-box {
+                padding: 8px 10px !important;
+                font-size: 11px !important;
+                line-height: 1.5 !important;
+            }
+
+            .admin-remark {
+                padding: 6px 10px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .admin-remark-header {
+                font-size: 10px !important;
+                margin-bottom: 4px !important;
+            }
+
+            .admin-remark-content {
+                font-size: 10px !important;
+            }
+
+            .timeline {
+                gap: 4px !important;
+            }
+
+            .timeline-item {
+                padding: 5px 8px !important;
+                gap: 7px !important;
+            }
+
+            .timeline-dot {
+                width: 7px !important;
+                height: 7px !important;
+                margin-top: 3px !important;
+            }
+
+            .timeline-header {
+                flex-direction: row !important;
+                align-items: center !important;
+            }
+
+            .timeline-status {
+                font-size: 11px !important;
+            }
+
+            .timeline-date {
+                font-size: 9px !important;
+            }
+
+            .timeline-user {
+                font-size: 10px !important;
+            }
+
+            .timeline-remark {
+                font-size: 9px !important;
+            }
+
+            .signature-section {
+                margin-top: 12px !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 20px !important;
+            }
+
+            .signature-box {
+                padding-top: 25px !important;
+            }
+
+            .signature-line {
+                width: 140px !important;
+                margin-bottom: 4px !important;
+            }
+
+            .signature-label {
+                font-size: 10px !important;
+            }
+
+            .signature-sublabel {
+                font-size: 9px !important;
+            }
+
+            .footer {
+                padding: 6px 20px !important;
+                flex-direction: row !important;
+                margin-top: auto !important;
+            }
+
+            .footer-left,
+            .footer-right {
+                font-size: 9px !important;
             }
 
             .header,
