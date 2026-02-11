@@ -120,8 +120,8 @@ $status_bg = [
 
         body {
             font-family: 'Sarabun', sans-serif;
-            font-size: 14px;
-            line-height: 1.6;
+            font-size: 13px;
+            line-height: 1.5;
             color: var(--text-dark);
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
@@ -129,18 +129,19 @@ $status_bg = [
 
         .page {
             width: 210mm;
-            height: 297mm;
+            min-height: 297mm;
             margin: 0 auto;
             background: #fff;
             position: relative;
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         /* Header - Bright Style */
         .header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             color: #fff;
-            padding: 18px 30px;
+            padding: 12px 25px;
             position: relative;
         }
 
@@ -150,7 +151,7 @@ $status_bg = [
             bottom: 0;
             left: 0;
             right: 0;
-            height: 4px;
+            height: 3px;
             background: linear-gradient(90deg, #06B6D4, #10B981, #F59E0B);
         }
 
@@ -167,13 +168,13 @@ $status_bg = [
         }
 
         .header-text h1 {
-            font-size: 20px;
+            font-size: 17px;
             font-weight: 700;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
 
         .header-text .subtitle {
-            font-size: 13px;
+            font-size: 11px;
             opacity: 0.9;
         }
 
@@ -182,7 +183,7 @@ $status_bg = [
         }
 
         .request-number {
-            font-size: 26px;
+            font-size: 22px;
             font-weight: 700;
             letter-spacing: -0.5px;
         }
@@ -194,17 +195,18 @@ $status_bg = [
 
         /* Content */
         .content {
-            padding: 22px 30px;
+            padding: 15px 25px;
+            flex: 1;
         }
 
         /* Document Title */
         .document-title {
             text-align: center;
-            font-size: 17px;
+            font-size: 15px;
             font-weight: 700;
             color: var(--primary);
-            margin-bottom: 18px;
-            padding-bottom: 12px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
             border-bottom: 2px solid var(--primary);
         }
 
@@ -220,15 +222,15 @@ $status_bg = [
                 <?php echo $status_colors[$request['status']]; ?>
             ;
             border-radius: 8px;
-            padding: 14px 18px;
-            margin-bottom: 18px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .title-bar h2 {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 700;
             color: var(--text-dark);
             max-width: 60%;
@@ -263,8 +265,8 @@ $status_bg = [
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
+            gap: 12px;
+            margin-bottom: 12px;
         }
 
         /* Card */
@@ -279,21 +281,21 @@ $status_bg = [
         .card-header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             color: #fff;
-            padding: 10px 14px;
+            padding: 7px 12px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .card-icon {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             background: rgba(255, 255, 255, 0.25);
-            border-radius: 6px;
+            border-radius: 5px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 700;
         }
 
@@ -303,20 +305,20 @@ $status_bg = [
         }
 
         .card-body {
-            padding: 14px;
+            padding: 10px 12px;
         }
 
         /* Info List */
         .info-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 6px;
         }
 
         .info-row {
             display: flex;
             align-items: flex-start;
-            padding-bottom: 8px;
+            padding-bottom: 5px;
             border-bottom: 1px dotted #e5e7eb;
         }
 
@@ -334,7 +336,7 @@ $status_bg = [
         }
 
         .info-value {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-dark);
             font-weight: 600;
         }
@@ -347,24 +349,24 @@ $status_bg = [
         }
 
         .avatar {
-            width: 42px;
-            height: 42px;
+            width: 36px;
+            height: 36px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
             color: #fff;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 700;
             flex-shrink: 0;
         }
 
         .requester-details h3 {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             color: var(--text-dark);
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
 
         .requester-details p {
@@ -378,9 +380,9 @@ $status_bg = [
             background: var(--bg-light);
             border: 1px solid #e5e7eb;
             border-radius: 6px;
-            padding: 12px;
-            font-size: 12px;
-            line-height: 1.7;
+            padding: 10px;
+            font-size: 11px;
+            line-height: 1.6;
         }
 
         /* Admin Remark */
@@ -389,8 +391,8 @@ $status_bg = [
             border: 1px solid #fbbf24;
             border-left: 4px solid #F59E0B;
             border-radius: 8px;
-            padding: 12px 14px;
-            margin-bottom: 16px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
         }
 
         .admin-remark-header {
@@ -410,22 +412,22 @@ $status_bg = [
         .timeline {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 5px;
         }
 
         .timeline-item {
             display: flex;
-            gap: 10px;
-            padding: 10px 12px;
+            gap: 8px;
+            padding: 7px 10px;
             background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
             border: 1px solid #e5e7eb;
-            border-radius: 8px;
+            border-radius: 6px;
             position: relative;
         }
 
         .timeline-dot {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
             border-radius: 50%;
             margin-top: 4px;
@@ -469,16 +471,13 @@ $status_bg = [
 
         /* Footer */
         .footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
             color: #fff;
-            padding: 10px 30px;
+            padding: 8px 25px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-top: auto;
         }
 
         .footer-left {
@@ -493,15 +492,15 @@ $status_bg = [
 
         /* Signature Section */
         .signature-section {
-            margin-top: 25px;
+            margin-top: 15px;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
+            gap: 20px;
         }
 
         .signature-box {
             text-align: center;
-            padding-top: 40px;
+            padding-top: 30px;
         }
 
         .signature-line {
@@ -568,14 +567,22 @@ $status_bg = [
         }
 
         /* Print Styles */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
         @media print {
             body {
                 background: #fff !important;
             }
 
             .page {
+                width: 210mm;
+                min-height: 297mm;
                 margin: 0;
                 box-shadow: none;
+                page-break-inside: avoid;
             }
 
             .action-buttons {
@@ -593,7 +600,7 @@ $status_bg = [
             }
         }
 
-        @media screen {
+        @media screen and (min-width: 821px) {
             body {
                 padding: 25px;
             }
@@ -601,6 +608,204 @@ $status_bg = [
             .page {
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
                 border-radius: 12px;
+            }
+        }
+
+        @media screen and (max-width: 820px) {
+            body {
+                padding: 0 !important;
+                background: #fff;
+            }
+
+            .page {
+                width: 100% !important;
+                min-height: auto;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+
+            .content {
+                padding: 12px 15px;
+            }
+
+            .header {
+                padding: 10px 15px;
+            }
+
+            .header-text h1 {
+                font-size: 15px;
+            }
+
+            .header-text .subtitle {
+                font-size: 10px;
+            }
+
+            .request-number {
+                font-size: 18px;
+            }
+
+            .document-title {
+                font-size: 14px;
+                margin-bottom: 10px;
+                padding-bottom: 6px;
+            }
+
+            .title-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                padding: 8px 12px;
+                margin-bottom: 10px;
+            }
+
+            .title-bar h2 {
+                max-width: 100%;
+                font-size: 13px;
+            }
+
+            .badges {
+                flex-wrap: wrap;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .card-header {
+                padding: 6px 10px;
+            }
+
+            .card-body {
+                padding: 8px 10px;
+            }
+
+            .info-label {
+                width: 75px;
+                font-size: 10px;
+            }
+
+            .info-value {
+                font-size: 10px;
+            }
+
+            .avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+            }
+
+            .requester-details h3 {
+                font-size: 11px;
+            }
+
+            .requester-details p {
+                font-size: 10px;
+            }
+
+            .description-box {
+                padding: 8px;
+                font-size: 11px;
+            }
+
+            .admin-remark {
+                padding: 8px 10px;
+                margin-bottom: 10px;
+            }
+
+            .admin-remark-header {
+                font-size: 10px;
+            }
+
+            .admin-remark-content {
+                font-size: 10px;
+            }
+
+            .timeline-item {
+                padding: 6px 8px;
+            }
+
+            .timeline-status {
+                font-size: 11px;
+            }
+
+            .timeline-date {
+                font-size: 9px;
+            }
+
+            .timeline-user {
+                font-size: 10px;
+            }
+
+            .signature-section {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                margin-top: 12px;
+            }
+
+            .signature-box {
+                padding-top: 20px;
+            }
+
+            .footer {
+                padding: 6px 15px;
+                flex-direction: column;
+                gap: 2px;
+                text-align: center;
+            }
+
+            .action-buttons {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 10px 15px;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+                box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+                border-radius: 0;
+                justify-content: center;
+                z-index: 1000;
+            }
+
+            .btn {
+                padding: 8px 16px;
+                font-size: 12px;
+                flex: 1;
+                justify-content: center;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+
+            .header-right {
+                text-align: left;
+            }
+
+            .request-number {
+                font-size: 16px;
+            }
+
+            .header-left img {
+                width: 40px !important;
+                height: 40px !important;
+            }
+
+            .timeline-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 2px;
+            }
+
+            .badge {
+                padding: 3px 8px;
+                font-size: 10px;
             }
         }
     </style>
@@ -638,7 +843,7 @@ $status_bg = [
 
             <!-- Title Bar -->
             <div class="title-bar">
-                <h2><?php echo htmlspecialchars($request['title']); ?></h2>
+                <h2><?php echo htmlspecialchars($request['title'] ?? ''); ?></h2>
                 <div class="badges">
                     <span class="badge badge-status">
                         <?php echo $status_texts[$request['status']]; ?>
@@ -662,12 +867,13 @@ $status_bg = [
                             <div class="info-row">
                                 <span class="info-label">หมวดหมู่</span>
                                 <span
-                                    class="info-value"><?php echo htmlspecialchars($request['category_name']); ?></span>
+                                    class="info-value"><?php echo htmlspecialchars($request['category_name'] ?? ''); ?></span>
                             </div>
                             <?php if ($request['location']): ?>
                                 <div class="info-row">
                                     <span class="info-label">สถานที่</span>
-                                    <span class="info-value"><?php echo htmlspecialchars($request['location']); ?></span>
+                                    <span
+                                        class="info-value"><?php echo htmlspecialchars($request['location'] ?? ''); ?></span>
                                 </div>
                             <?php endif; ?>
                             <div class="info-row">
@@ -686,7 +892,7 @@ $status_bg = [
                                 <div class="info-row">
                                     <span class="info-label">ผู้ดำเนินการ</span>
                                     <span
-                                        class="info-value"><?php echo htmlspecialchars($completed_by['fullname']); ?></span>
+                                        class="info-value"><?php echo htmlspecialchars($completed_by['fullname'] ?? ''); ?></span>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -701,15 +907,23 @@ $status_bg = [
                     </div>
                     <div class="card-body">
                         <div class="requester-info">
-                            <div class="avatar"><?php echo mb_substr($request['requester_name'], 0, 1); ?></div>
+                            <div class="avatar"><?php
+                            $name = $request['requester_name'] ?? '';
+                            if (function_exists('mb_substr')) {
+                                echo mb_substr($name, 0, 1);
+                            } else {
+                                preg_match('/./u', $name, $m);
+                                echo $m[0] ?? substr($name, 0, 1);
+                            }
+                            ?></div>
                             <div class="requester-details">
-                                <h3><?php echo htmlspecialchars($request['requester_name']); ?></h3>
-                                <p>อีเมล: <?php echo htmlspecialchars($request['requester_email']); ?></p>
+                                <h3><?php echo htmlspecialchars($request['requester_name'] ?? ''); ?></h3>
+                                <p>อีเมล: <?php echo htmlspecialchars($request['requester_email'] ?? ''); ?></p>
                                 <?php if ($request['requester_department']): ?>
-                                    <p>แผนก: <?php echo htmlspecialchars($request['requester_department']); ?></p>
+                                    <p>แผนก: <?php echo htmlspecialchars($request['requester_department'] ?? ''); ?></p>
                                 <?php endif; ?>
                                 <?php if ($request['requester_phone']): ?>
-                                    <p>โทร: <?php echo htmlspecialchars($request['requester_phone']); ?></p>
+                                    <p>โทร: <?php echo htmlspecialchars($request['requester_phone'] ?? ''); ?></p>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -725,7 +939,7 @@ $status_bg = [
                 </div>
                 <div class="card-body">
                     <div class="description-box">
-                        <?php echo nl2br(htmlspecialchars($request['description'])); ?>
+                        <?php echo nl2br(htmlspecialchars($request['description'] ?? '')); ?>
                     </div>
                 </div>
             </div>
@@ -734,7 +948,8 @@ $status_bg = [
             <?php if ($request['admin_remark']): ?>
                 <div class="admin-remark">
                     <div class="admin-remark-header">หมายเหตุจากผู้ดูแลระบบ</div>
-                    <div class="admin-remark-content"><?php echo nl2br(htmlspecialchars($request['admin_remark'])); ?></div>
+                    <div class="admin-remark-content"><?php echo nl2br(htmlspecialchars($request['admin_remark'] ?? '')); ?>
+                    </div>
                 </div>
             <?php endif; ?>
 
@@ -753,15 +968,25 @@ $status_bg = [
                                     <div class="timeline-content">
                                         <div class="timeline-header">
                                             <span
-                                                class="timeline-status"><?php echo $status_texts[$history['status']]; ?></span>
+                                                class="timeline-status"><?php echo $status_texts[$history['status']] ?? $history['status']; ?></span>
                                             <span
                                                 class="timeline-date"><?php echo thai_date($history['created_at'], 'j F Y H:i น.'); ?></span>
                                         </div>
-                                        <div class="timeline-user">โดย: <?php echo htmlspecialchars($history['fullname']); ?>
+                                        <div class="timeline-user">โดย:
+                                            <?php echo htmlspecialchars($history['fullname'] ?? ''); ?>
                                         </div>
                                         <?php if ($history['remark']): ?>
                                             <div class="timeline-remark">
-                                                "<?php echo mb_substr($history['remark'], 0, 80); ?><?php echo mb_strlen($history['remark']) > 80 ? '...' : ''; ?>"
+                                                "<?php
+                                                $remark = $history['remark'] ?? '';
+                                                if (function_exists('mb_substr')) {
+                                                    echo mb_substr($remark, 0, 80);
+                                                    echo mb_strlen($remark) > 80 ? '...' : '';
+                                                } else {
+                                                    echo substr($remark, 0, 80);
+                                                    echo strlen($remark) > 80 ? '...' : '';
+                                                }
+                                                ?>"
                                             </div>
                                         <?php endif; ?>
                                     </div>
@@ -791,6 +1016,7 @@ $status_bg = [
             </div>
         </div>
     </div>
+
 
     <?php
     // ดึงรูปภาพจากประวัติทั้งหมด
@@ -839,7 +1065,7 @@ $status_bg = [
                             <div class="card-title">รูปภาพประกอบการแจ้งซ่อม</div>
                         </div>
                         <div class="card-body" style="text-align: center;">
-                            <img src="<?php echo htmlspecialchars($request['image']); ?>" alt="รูปภาพประกอบ"
+                            <img src="<?php echo htmlspecialchars($request['image'] ?? ''); ?>" alt="รูปภาพประกอบ"
                                 style="max-width: 100%; max-height: 280px; border-radius: 8px; border: 1px solid var(--border);">
                             <p style="margin-top: 8px; color: var(--text-light); font-size: 11px;">
                                 รูปภาพที่แนบมาพร้อมการแจ้งซ่อม</p>
@@ -859,12 +1085,12 @@ $status_bg = [
                                 <?php while ($img = mysqli_fetch_assoc($all_history_images)): ?>
                                     <div
                                         style="background: var(--bg-light); padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; text-align: center;">
-                                        <img src="<?php echo htmlspecialchars($img['image']); ?>" alt="รูปภาพ"
+                                        <img src="<?php echo htmlspecialchars($img['image'] ?? ''); ?>" alt="รูปภาพ"
                                             style="max-width: 100%; max-height: 280px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 8px;">
                                         <div style="font-size: 11px; color: var(--text-dark);">
                                             <strong><?php echo $status_texts[$img['status']] ?? $img['status']; ?></strong>
                                             <span style="color: var(--text-light);"> - โดย
-                                                <?php echo htmlspecialchars($img['fullname']); ?></span>
+                                                <?php echo htmlspecialchars($img['fullname'] ?? ''); ?></span>
                                         </div>
                                         <div style="font-size: 10px; color: var(--text-light);">
                                             <?php echo thai_date($img['created_at'], 'j F Y H:i น.'); ?>
