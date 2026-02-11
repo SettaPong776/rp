@@ -83,7 +83,7 @@ include 'includes/header.php';
 <!-- บัตรสรุปสถิติ -->
 <div class="row mb-4">
     <!-- รายการทั้งหมด -->
-    <div class="col-md-3 mb-4">
+    <div class="col-6 col-md-3 mb-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -102,7 +102,7 @@ include 'includes/header.php';
     </div>
 
     <!-- เสร็จสิ้น -->
-    <div class="col-md-3 mb-4">
+    <div class="col-6 col-md-3 mb-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -121,7 +121,7 @@ include 'includes/header.php';
     </div>
 
     <!-- กำลังดำเนินการ -->
-    <div class="col-md-3 mb-4">
+    <div class="col-6 col-md-3 mb-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -140,7 +140,7 @@ include 'includes/header.php';
     </div>
 
     <!-- รอดำเนินการ -->
-    <div class="col-md-3 mb-4">
+    <div class="col-6 col-md-3 mb-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center">

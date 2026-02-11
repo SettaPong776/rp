@@ -88,7 +88,7 @@ include 'includes/header.php';
 <!-- บัตรสรุปสถิติ -->
 <div class="row mb-4">
     <!-- รายการทั้งหมด -->
-    <div class="col-md-3 mb-4">
+    <div class="col-6 col-md-3 mb-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -107,7 +107,7 @@ include 'includes/header.php';
     </div>
 
     <!-- เสร็จสิ้น -->
-    <div class="col-md-3 mb-4">
+    <div class="col-6 col-md-3 mb-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -126,7 +126,7 @@ include 'includes/header.php';
     </div>
 
     <!-- กำลังดำเนินการ -->
-    <div class="col-md-3 mb-4">
+    <div class="col-6 col-md-3 mb-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -145,7 +145,7 @@ include 'includes/header.php';
     </div>
 
     <!-- รอดำเนินการ -->
-    <div class="col-md-3 mb-4">
+    <div class="col-6 col-md-3 mb-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center">
@@ -302,6 +302,10 @@ include 'includes/header.php';
 <!-- สคริปต์สำหรับสร้างแผนภูมิ -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // กำหนดตำแหน่ง legend ตามขนาดหน้าจอ
+        var legendPos = window.innerWidth <= 768 ? 'bottom' : 'right';
+        var titleSize = window.innerWidth <= 768 ? 13 : 16;
+
         // แผนภูมิวงกลมแสดงการกระจายตามสถานะ
         const statusCtx = document.getElementById('statusChart').getContext('2d');
         const statusChart = new Chart(statusCtx, {
@@ -330,18 +334,20 @@ include 'includes/header.php';
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        position: 'right',
+                        position: legendPos,
                         labels: {
                             font: {
-                                family: 'Prompt'
-                            }
+                                family: 'Prompt',
+                                size: window.innerWidth <= 480 ? 10 : 12
+                            },
+                            boxWidth: window.innerWidth <= 480 ? 12 : 40
                         }
                     },
                     title: {
                         display: true,
                         text: 'สถานะรายการแจ้งซ่อม',
                         font: {
-                            size: 16,
+                            size: titleSize,
                             family: 'Prompt'
                         }
                     }
@@ -390,18 +396,20 @@ include 'includes/header.php';
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        position: 'right',
+                        position: legendPos,
                         labels: {
                             font: {
-                                family: 'Prompt'
-                            }
+                                family: 'Prompt',
+                                size: window.innerWidth <= 480 ? 10 : 12
+                            },
+                            boxWidth: window.innerWidth <= 480 ? 12 : 40
                         }
                     },
                     title: {
                         display: true,
                         text: 'หมวดหมู่รายการแจ้งซ่อม',
                         font: {
-                            size: 16,
+                            size: titleSize,
                             family: 'Prompt'
                         }
                     }

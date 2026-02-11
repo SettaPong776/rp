@@ -190,6 +190,25 @@ $current_page = basename($_SERVER['PHP_SELF']);
             cursor: pointer;
         }
 
+        /* Sidebar Overlay สำหรับมือถือ */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
         .card {
             border: none;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
@@ -213,8 +232,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
             border-color: var(--primary-dark);
         }
 
-        /* กำหนด Responsive */
-        @media (max-width: 768px) {
+        /* ===== Responsive: Tablet (max-width: 992px) ===== */
+        @media (max-width: 992px) {
             .sidebar {
                 left: -250px;
             }
@@ -224,21 +243,263 @@ $current_page = basename($_SERVER['PHP_SELF']);
             }
 
             .content {
-                margin-left: 0;
+                margin-left: 0 !important;
             }
 
             .content.expanded {
-                margin-left: 0;
+                margin-left: 0 !important;
             }
 
             .mobile-toggle {
                 display: block;
+            }
+
+            /* ปรับ topbar */
+            .topbar {
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 10px 15px;
+            }
+
+            .topbar .user-info h6 {
+                font-size: 0.9rem;
+            }
+
+            /* ปรับ chart legend ให้อยู่ด้านล่าง */
+            .chart-container {
+                height: 280px !important;
+            }
+        }
+
+        /* ===== Responsive: มือถือ (max-width: 768px) ===== */
+        @media (max-width: 768px) {
+            .content {
+                padding: 15px 10px;
+            }
+
+            .topbar {
+                border-radius: 8px;
+                margin-bottom: 15px;
+            }
+
+            /* ปรับ Page Title ให้ stack บนมือถือ */
+            .d-sm-flex {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 10px;
+            }
+
+            .d-sm-flex .btn,
+            .d-sm-flex>div {
+                width: 100%;
+            }
+
+            .d-sm-flex>div {
+                display: flex;
+                gap: 8px;
+            }
+
+            .d-sm-flex>div .btn {
+                flex: 1;
+            }
+
+            /* ปรับ heading ขนาด */
+            h1.h3,
+            .h3 {
+                font-size: 1.25rem;
+            }
+
+            h1.display-4,
+            .display-4 {
+                font-size: 1.75rem;
+            }
+
+            h2 {
+                font-size: 1.3rem;
+            }
+
+            /* ปรับ card body padding */
+            .card-body {
+                padding: 1rem;
+            }
+
+            .card-header {
+                padding: 0.75rem 1rem;
+            }
+
+            /* ปรับ filter form */
+            .row.g-3>[class*="col-md-3"] {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            /* ปรับ table */
+            .table-responsive {
+                margin: 0 -1rem;
+                padding: 0 0.5rem;
+                width: calc(100% + 2rem);
+            }
+
+            .table {
+                font-size: 0.85rem;
+            }
+
+            .table th,
+            .table td {
+                padding: 0.5rem 0.4rem;
+                white-space: nowrap;
+            }
+
+            .btn-sm {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.75rem;
+            }
+
+            .btn-group .btn-sm {
+                padding: 0.25rem 0.5rem;
+            }
+
+            /* ปรับ badge */
+            .badge {
+                font-size: 0.7rem;
+                padding: 0.3em 0.5em;
+            }
+
+            /* ปรับ Chart */
+            .chart-container {
+                height: 250px !important;
+            }
+
+            /* ปรับ modal */
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+
+            /* ปรับ stat cards ให้เป็น 2 คอลัมน์ */
+            .row>.col-md-3 {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+
+            .row>.col-md-3 .card-body {
+                padding: 0.75rem;
+            }
+
+            .row>.col-md-3 .h5 {
+                font-size: 0.9rem;
+            }
+
+            .row>.col-md-3 .text-muted {
+                font-size: 0.8rem;
+            }
+
+            .row>.col-md-3 .rounded p-3,
+            .row>.col-md-3 [style*="font-size: 2rem"] {
+                font-size: 1.5rem !important;
+            }
+
+            /* ปรับ Welcome Section */
+            .p-5 {
+                padding: 1.5rem !important;
+            }
+
+            .p-md-5 {
+                padding: 1.5rem !important;
+            }
+
+            /* ปรับปุ่ม Hero */
+            .d-md-flex {
+                flex-direction: column;
+            }
+
+            .d-md-flex .btn {
+                width: 100%;
+                margin-bottom: 8px;
+            }
+
+            /* ปรับ Accordion */
+            .accordion-button {
+                font-size: 0.9rem;
+                padding: 0.75rem 1rem;
+            }
+
+            .accordion-body {
+                font-size: 0.85rem;
+                padding: 0.75rem 1rem;
+            }
+        }
+
+        /* ===== Responsive: มือถือเล็ก (max-width: 480px) ===== */
+        @media (max-width: 480px) {
+            .content {
+                padding: 10px 8px;
+            }
+
+            h1.h3,
+            .h3 {
+                font-size: 1.1rem;
+            }
+
+            h1.display-4,
+            .display-4 {
+                font-size: 1.5rem;
+            }
+
+            .topbar {
+                padding: 8px 10px;
+            }
+
+            .topbar .user-info img {
+                width: 32px;
+                height: 32px;
+            }
+
+            .topbar .user-info h6 {
+                font-size: 0.8rem;
+            }
+
+            .topbar .user-info small {
+                font-size: 0.7rem;
+            }
+
+            /* ซ่อนข้อความบางส่วนในปุ่ม */
+            .card-header .btn-sm {
+                font-size: 0.75rem;
+                padding: 0.2rem 0.5rem;
+            }
+
+            /* ปรับ stat cards ให้เล็กลง */
+            .row>.col-md-3 .flex-shrink-0 .rounded {
+                padding: 0.5rem !important;
+            }
+
+            .row>.col-md-3 .ms-3 {
+                margin-left: 0.5rem !important;
+            }
+
+            .row>.col-md-3 .h5 {
+                font-size: 0.8rem;
+            }
+
+            .row>.col-md-3 .text-muted {
+                font-size: 0.7rem;
+            }
+
+            .table {
+                font-size: 0.78rem;
+            }
+
+            .lead {
+                font-size: 0.9rem;
             }
         }
     </style>
 </head>
 
 <body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="logo-container">
