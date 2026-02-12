@@ -549,6 +549,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
                             <span>ตั้งค่า</span>
                         </a>
                     <?php endif; ?>
+                    <a href="admin_profile.php"
+                        class="menu-item <?php echo ($current_page == 'admin_profile.php') ? 'active' : ''; ?>">
+                        <i class="bx bx-user-circle"></i>
+                        <span>ข้อมูลส่วนตัว</span>
+                    </a>
                 <?php else: ?>
                     <!-- User Menu -->
                     <a href="dashboard.php" class="menu-item <?php echo ($current_page == 'dashboard.php') ? 'active' : ''; ?>">
