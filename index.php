@@ -227,14 +227,14 @@ include 'includes/header.php';
                     <i class="bx bx-envelope me-3 text-primary" style="font-size: 1.5rem;"></i>
                     <div>
                         <h6 class="mb-0">อีเมล</h6>
-                        <p class="mb-0">support@example.com</p>
+                        <p class="mb-0">inven@lru.ac.th</p>
                     </div>
                 </div>
                 <div class="d-flex align-items-center mb-3">
                     <i class="bx bx-phone me-3 text-primary" style="font-size: 1.5rem;"></i>
                     <div>
                         <h6 class="mb-0">โทรศัพท์</h6>
-                        <p class="mb-0">0-2222-2222</p>
+                        <p class="mb-0">4117 (งานพัสดุ กองกลาง สำนักงานอธิการบดี)</p>
                     </div>
                 </div>
                 <div class="d-flex align-items-center">
