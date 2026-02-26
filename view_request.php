@@ -56,6 +56,7 @@ if (!in_array($_SESSION['role'], ['admin', 'building_staff']) && $request['user_
 if (in_array($_SESSION['role'], ['admin', 'building_staff']) && isset($_POST['update_status'])) {
     $new_status = trim($_POST['new_status']);
     $admin_remark = trim($_POST['admin_remark']);
+    $new_priority = trim($_POST['new_priority']);
 
     // อัพโหลดรูปภาพ
     $file_path = "";
@@ -86,15 +87,15 @@ if (in_array($_SESSION['role'], ['admin', 'building_staff']) && isset($_POST['up
     // อัพเดตสถานะในฐานข้อมูล
     if ($new_status == 'completed') {
         $update_success = db_execute(
-            "UPDATE repair_requests SET status = ?, admin_remark = ?, completed_date = NOW() WHERE request_id = ?",
-            "ssi",
-            [$new_status, $admin_remark, $request_id]
+            "UPDATE repair_requests SET status = ?, admin_remark = ?, priority = ?, completed_date = NOW() WHERE request_id = ?",
+            "sssi",
+            [$new_status, $admin_remark, $new_priority, $request_id]
         );
     } else {
         $update_success = db_execute(
-            "UPDATE repair_requests SET status = ?, admin_remark = ? WHERE request_id = ?",
-            "ssi",
-            [$new_status, $admin_remark, $request_id]
+            "UPDATE repair_requests SET status = ?, admin_remark = ?, priority = ? WHERE request_id = ?",
+            "sssi",
+            [$new_status, $admin_remark, $new_priority, $request_id]
         );
     }
 
@@ -158,6 +159,31 @@ $history_result = db_select(
     [$request_id]
 );
 
+// ดึงประวัติการซ่อมของครุภัณฑ์เดียวกัน (ถ้ามีหมายเลขครุภัณฑ์)
+$asset_history = null;
+$asset_repair_count = 0;
+if (!empty($request['asset_number'])) {
+    $asset_history = db_select(
+        "SELECT r.request_id, r.title, r.status, r.created_at, r.completed_date,
+                u.fullname as requester_name, c.category_name
+         FROM repair_requests r
+         JOIN users u ON r.user_id = u.user_id
+         JOIN categories c ON r.category_id = c.category_id
+         WHERE r.asset_number = ? AND r.request_id != ?
+         ORDER BY r.created_at DESC",
+        "si",
+        [$request['asset_number'], $request_id]
+    );
+    // นับจำนวนครั้งที่ซ่อมทั้งหมด (รวมรายการปัจจุบันด้วย)
+    $count_result = db_select(
+        "SELECT COUNT(*) as total FROM repair_requests WHERE asset_number = ?",
+        "s",
+        [$request['asset_number']]
+    );
+    $count_row = mysqli_fetch_assoc($count_result);
+    $asset_repair_count = $count_row['total'];
+}
+
 // แสดงหน้าเว็บ
 include 'includes/header.php';
 ?>
@@ -168,7 +194,7 @@ include 'includes/header.php';
         <i class="bx bx-detail me-2"></i>รายละเอียดการแจ้งซ่อม #<?php echo $request_id; ?>
     </h1>
     <div>
-       
+
         <?php if (in_array($_SESSION['role'], ['admin', 'building_staff'])): ?>
             <a href="admin_requests.php" class="btn btn-secondary">
                 <i class="bx bx-arrow-back me-1"></i>กลับ
@@ -176,9 +202,9 @@ include 'includes/header.php';
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
                 <i class="bx bx-edit me-1"></i>อัพเดตสถานะ
             </button>
-             <a href="print_request.php?id=<?php echo $request_id; ?>" class="btn btn-danger" target="_blank">
-            <i class="bx bxs-file-pdf me-1"></i>รายงาน PDF
-        </a>
+            <a href="print_request.php?id=<?php echo $request_id; ?>" class="btn btn-danger" target="_blank">
+                <i class="bx bxs-file-pdf me-1"></i>รายงาน PDF
+            </a>
         <?php else: ?>
             <a href="my_requests.php" class="btn btn-secondary">
                 <i class="bx bx-arrow-back me-1"></i>กลับ
@@ -254,6 +280,15 @@ include 'includes/header.php';
                         <span>สถานที่: <?php echo $request['location']; ?></span>
                     </div>
                 <?php endif; ?>
+                <?php if ($request['asset_number']): ?>
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bx bx-barcode me-2 text-primary"></i>
+                        <span>หมายเลขครุภัณฑ์:
+                            <strong><?php echo htmlspecialchars($request['asset_number']); ?></strong>
+                            <span class="badge bg-secondary ms-2">ซ่อมแล้ว <?php echo $asset_repair_count; ?> ครั้ง</span>
+                        </span>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="col-md-4">
                 <div class="card border-0 shadow-sm">
@@ -319,6 +354,59 @@ include 'includes/header.php';
 
             </div>
         </div>
+
+        <?php if (!empty($request['asset_number']) && $asset_history && mysqli_num_rows($asset_history) > 0): ?>
+        <!-- ประวัติการซ่อมของครุภัณฑ์นี้ -->
+        <div class="card shadow mb-4 border-warning">
+            <div class="card-header py-3" style="background-color: #FFF8E7;">
+                <h6 class="m-0 fw-bold text-warning">
+                    <i class="bx bx-history me-2"></i>ประวัติการซ่อมครุภัณฑ์หมายเลข
+                    <span class="text-dark"><?php echo htmlspecialchars($request['asset_number']); ?></span>
+                    <span class="badge bg-warning text-dark ms-2">ซ่อมแล้วทั้งหมด <?php echo $asset_repair_count; ?> ครั้ง</span>
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>#</th>
+                                <th>เรื่อง</th>
+                                <th class="text-center">สถานะ</th>
+                                <th>วันที่แจ้ง</th>
+                                <th>วันที่เสร็จ</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while ($ah = mysqli_fetch_assoc($asset_history)): ?>
+                                <?php
+                                $status_badges = [
+                                    'pending'     => '<span class="badge bg-warning text-dark">รอดำเนินการ</span>',
+                                    'in_progress' => '<span class="badge bg-info text-white">กำลังดำเนินการ</span>',
+                                    'completed'   => '<span class="badge bg-success">เสร็จสิ้น</span>',
+                                    'rejected'    => '<span class="badge bg-danger">ยกเลิก</span>'
+                                ];
+                                ?>
+                                <tr>
+                                    <td>#<?php echo $ah['request_id']; ?></td>
+                                    <td><?php echo htmlspecialchars($ah['title']); ?></td>
+                                    <td class="text-center"><?php echo $status_badges[$ah['status']] ?? '-'; ?></td>
+                                    <td><?php echo thai_date($ah['created_at'], 'j M Y'); ?></td>
+                                    <td><?php echo $ah['completed_date'] ? thai_date($ah['completed_date'], 'j M Y') : '-'; ?></td>
+                                    <td>
+                                        <a href="view_request.php?id=<?php echo $ah['request_id']; ?>" class="btn btn-sm btn-outline-primary">
+                                            <i class="bx bx-show-alt"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
     <div class="col-md-4">
@@ -433,6 +521,23 @@ include 'includes/header.php';
                                         <option value="in_progress" <?php echo $request['status'] == 'in_progress' ? 'selected' : ''; ?>>กำลังดำเนินการ</option>
                                         <option value="completed" <?php echo $request['status'] == 'completed' ? 'selected' : ''; ?>>เสร็จสิ้น</option>
                                         <option value="rejected" <?php echo $request['status'] == 'rejected' ? 'selected' : ''; ?>>ยกเลิก</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="new_priority" class="form-label">ความสำคัญ <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="bx bx-flag"></i>
+                                    </span>
+                                    <select class="form-select" id="new_priority" name="new_priority" required>
+                                        <option value="low" <?php echo $request['priority'] == 'low' ? 'selected' : ''; ?>>ต่ำ
+                                        </option>
+                                        <option value="medium" <?php echo $request['priority'] == 'medium' ? 'selected' : ''; ?>>ปานกลาง</option>
+                                        <option value="high" <?php echo $request['priority'] == 'high' ? 'selected' : ''; ?>>
+                                            สูง</option>
+                                        <option value="urgent" <?php echo $request['priority'] == 'urgent' ? 'selected' : ''; ?>>เร่งด่วน</option>
                                     </select>
                                 </div>
                             </div>

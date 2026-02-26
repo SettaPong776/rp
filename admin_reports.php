@@ -174,17 +174,17 @@ $request_stats = mysqli_fetch_assoc($result);
 $query = "SELECT 
             AVG(CASE 
                 WHEN status = 'completed' AND completed_date IS NOT NULL 
-                THEN TIMESTAMPDIFF(HOUR, created_at, completed_date) 
+                THEN TIMESTAMPDIFF(HOUR, created_at, completed_date) / 168 
                 ELSE NULL 
             END) as avg_completion_time,
             MAX(CASE 
                 WHEN status = 'completed' AND completed_date IS NOT NULL 
-                THEN TIMESTAMPDIFF(HOUR, created_at, completed_date) 
+                THEN TIMESTAMPDIFF(HOUR, created_at, completed_date) / 168 
                 ELSE NULL 
             END) as max_completion_time,
             MIN(CASE 
                 WHEN status = 'completed' AND completed_date IS NOT NULL 
-                THEN TIMESTAMPDIFF(HOUR, created_at, completed_date) 
+                THEN TIMESTAMPDIFF(HOUR, created_at, completed_date) / 168 
                 ELSE NULL 
             END) as min_completion_time,
             COUNT(CASE 
@@ -431,22 +431,22 @@ include 'includes/header.php';
             <div class="card-body">
                 <div class="text-center mb-4">
                     <h2 class="display-4 text-primary fw-bold">
-                        <?php echo $completion_stats['completed_count'] > 0 ? round($completion_stats['avg_completion_time']) : 0; ?>
+                        <?php echo $completion_stats['completed_count'] > 0 ? number_format($completion_stats['avg_completion_time'], 2) : '0.00'; ?>
                     </h2>
-                    <p class="text-muted">เวลาเฉลี่ยในการแก้ไข (ชั่วโมง)</p>
+                    <p class="text-muted">เวลาเฉลี่ยในการแก้ไข (สัปดาห์)</p>
                 </div>
                 <div class="row text-center">
                     <div class="col-6">
                         <h4 class="text-success">
-                            <?php echo $completion_stats['completed_count'] > 0 ? round($completion_stats['min_completion_time']) : 0; ?>
+                            <?php echo $completion_stats['completed_count'] > 0 ? number_format($completion_stats['min_completion_time'], 2) : '0.00'; ?>
                         </h4>
-                        <p class="text-muted">เร็วที่สุด (ชั่วโมง)</p>
+                        <p class="text-muted">เร็วที่สุด (สัปดาห์)</p>
                     </div>
                     <div class="col-6">
                         <h4 class="text-danger">
-                            <?php echo $completion_stats['completed_count'] > 0 ? round($completion_stats['max_completion_time']) : 0; ?>
+                            <?php echo $completion_stats['completed_count'] > 0 ? number_format($completion_stats['max_completion_time'], 2) : '0.00'; ?>
                         </h4>
-                        <p class="text-muted">ช้าที่สุด (ชั่วโมง)</p>
+                        <p class="text-muted">ช้าที่สุด (สัปดาห์)</p>
                     </div>
                 </div>
                 <div class="progress mt-3">

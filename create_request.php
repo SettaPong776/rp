@@ -21,8 +21,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $title = trim($_POST['title']);
     $category_id = intval($_POST['category_id']);
     $location = trim($_POST['location']);
+    $asset_number = trim($_POST['asset_number']);
     $description = trim($_POST['description']);
-    $priority = trim($_POST['priority']);
+    $priority = 'medium'; // ค่า default - admin/building_staff จะกำหนดความสำคัญเองในภายหลัง
     $image = '';
 
     // ตรวจสอบว่ามีข้อมูลครบหรือไม่
@@ -64,9 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (!isset($error)) {
             // บันทึกข้อมูลลงในฐานข้อมูล
             $request_id = db_insert(
-                "INSERT INTO repair_requests (user_id, category_id, title, description, location, priority, image) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                "iisssss",
-                [$user_id, $category_id, $title, $description, $location, $priority, $image]
+                "INSERT INTO repair_requests (user_id, category_id, title, description, location, asset_number, priority, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "iissssss",
+                [$user_id, $category_id, $title, $description, $location, $asset_number, $priority, $image]
             );
 
             if ($request_id) {
@@ -181,15 +182,13 @@ include 'includes/header.php';
                 </div>
 
                 <div class="col-md-6">
-                    <label for="priority" class="form-label">ความสำคัญ <span class="text-danger">*</span></label>
+                    <label for="asset_number" class="form-label">หมายเลขครุภัณฑ์ <span
+                            class="text-muted small">(ถ้ามี)</span></label>
                     <div class="input-group mb-3">
-                        <span class="input-group-text bg-light"><i class="bx bx-flag"></i></span>
-                        <select class="form-select" id="priority" name="priority" required>
-                            <option value="low" <?php echo (isset($_POST['priority']) && $_POST['priority'] == 'low') ? 'selected' : ''; ?>>ต่ำ</option>
-                            <option value="medium" <?php echo (!isset($_POST['priority']) || (isset($_POST['priority']) && $_POST['priority'] == 'medium')) ? 'selected' : ''; ?>>ปานกลาง</option>
-                            <option value="high" <?php echo (isset($_POST['priority']) && $_POST['priority'] == 'high') ? 'selected' : ''; ?>>สูง</option>
-                            <option value="urgent" <?php echo (isset($_POST['priority']) && $_POST['priority'] == 'urgent') ? 'selected' : ''; ?>>เร่งด่วน</option>
-                        </select>
+                        <span class="input-group-text bg-light"><i class="bx bx-barcode"></i></span>
+                        <input type="text" class="form-control" id="asset_number" name="asset_number"
+                            placeholder="เช่น มรล.07.303.02/68"
+                            value="<?php echo isset($_POST['asset_number']) ? htmlspecialchars($_POST['asset_number']) : ''; ?>">
                     </div>
                 </div>
 
@@ -240,9 +239,10 @@ include 'includes/header.php';
                 <ul>
                     <li><strong>หัวข้อเรื่อง:</strong> ระบุหัวข้อที่ตรงประเด็นและเข้าใจง่าย</li>
                     <li><strong>หมวดหมู่:</strong> เลือกหมวดหมู่ที่ตรงกับประเภทของปัญหามากที่สุด</li>
-                    <li><strong>สถานที่:</strong> ระบุสถานที่ที่เกิดปัญหาให้ชัดเจน เช่น ห้อง, หมายเลขห้อง, ชั้น, อาคาร
-                    </li>
-                    <li><strong>ความสำคัญ:</strong> เลือกระดับความสำคัญให้เหมาะสมกับความเร่งด่วนของปัญหา</li>
+                    
+                    <li><strong>สถานที่:</strong> ระบุสถานที่ที่เกิดปัญหาให้ชัดเจน เช่น ห้อง, หมายเลขห้อง, ชั้น, อาคาร </li>
+                    <li><strong>หมายเลขครุภัณฑ์:</strong> มรล.07.303.02/68</li>
+
                     <li><strong>รายละเอียด:</strong> อธิบายปัญหาให้ละเอียดและชัดเจนที่สุดและระบุหมายเลขครุภัณฑ์(ถ้ามี)
                     </li>
                 </ul>
@@ -252,8 +252,9 @@ include 'includes/header.php';
                 <div class="alert alert-light">
                     <p class="mb-0"><strong>หัวข้อ:</strong> เครื่องปรับอากาศไม่เย็น</p>
                     <p class="mb-0"><strong>หมวดหมู่:</strong> เครื่องปรับอากาศ</p>
+                    <p class="mb-0"><strong>หมายเลขครุภัณฑ์:</strong> มรล.07.303.02/68 </p>
                     <p class="mb-0"><strong>สถานที่:</strong> ห้องประชุม 301 ชั้น 3 อาคาร 20 </p>
-                    <p class="mb-0"><strong>ความสำคัญ:</strong> ปานกลาง</p>
+
                     <p class="mb-0"><strong>รายละเอียด:</strong> เครื่องปรับอากาศทำงานปกติแต่ไม่เย็น
                         มีเสียงดังผิดปกติเวลาเปิด และมีน้ำหยดจากเครื่อง ปัญหาเริ่มเกิดขึ้นเมื่อวานนี้ (18 พ.ค. 2566)
                         ช่วงบ่าย หมายเลขครุภัณฑ์ มรล. 07.303.02/68</p>
