@@ -27,8 +27,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $image = '';
 
     // ตรวจสอบว่ามีข้อมูลครบหรือไม่
-    if (empty($title) || empty($category_id) || empty($description)) {
+    if (empty($title) || empty($category_id) || empty($description) || empty($location)) {
         $error = 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน';
+    } elseif (!isset($_FILES['image']) || $_FILES['image']['size'] == 0) {
+        $error = 'กรุณาแนบรูปภาพประกอบการแจ้งซ่อม';
     } else {
         // จัดการการอัพโหลดรูปภาพ (ถ้ามี)
         if (isset($_FILES['image']) && $_FILES['image']['size'] > 0) {
@@ -172,11 +174,12 @@ include 'includes/header.php';
                 </div>
 
                 <div class="col-md-6">
-                    <label for="location" class="form-label">สถานที่/หมายเลขห้อง/อาคาร</label>
+                    <label for="location" class="form-label">สถานที่/หมายเลขห้อง/อาคาร <span
+                            class="text-danger">*</span></label>
                     <div class="input-group mb-3">
                         <span class="input-group-text bg-light"><i class="bx bx-map"></i></span>
                         <input type="text" class="form-control" id="location" name="location"
-                            placeholder="ระบุสถานที่ หมายเลขห้อง และ หมายเลขอาคาร"
+                            placeholder="ระบุสถานที่ หมายเลขห้อง และ หมายเลขอาคาร" required
                             value="<?php echo isset($_POST['location']) ? htmlspecialchars($_POST['location']) : ''; ?>">
                     </div>
                 </div>
@@ -197,18 +200,20 @@ include 'includes/header.php';
                     <div class="input-group mb-3">
                         <span class="input-group-text bg-light"><i class="bx bx-text"></i></span>
                         <textarea class="form-control" id="description" name="description" rows="5"
-                            placeholder="ระบุรายละเอียดของปัญหาที่ต้องการแจ้งซ่อมและระบุหมายเลขครุภัณฑ์ด้วย(ถ้ามี)"
+                            placeholder="ระบุรายละเอียดของปัญหาที่ต้องการแจ้งซ่อม"
                             required><?php echo isset($_POST['description']) ? htmlspecialchars($_POST['description']) : ''; ?></textarea>
                     </div>
                 </div>
 
                 <div class="col-12">
-                    <label for="image" class="form-label">รูปภาพประกอบ (ถ้ามี)</label>
+                    <label for="image" class="form-label">รูปภาพประกอบ <span class="text-danger">*</span></label>
                     <div class="input-group mb-3">
                         <span class="input-group-text bg-light"><i class="bx bx-image"></i></span>
-                        <input type="file" class="form-control" id="image" name="image">
+                        <input type="file" class="form-control" id="image" name="image" accept="image/*">
                     </div>
                     <div class="form-text">อัพโหลดได้เฉพาะไฟล์รูปภาพ (jpg, jpeg, png, gif) ขนาดไม่เกิน 5MB</div>
+                    <div id="image-error" class="text-danger small mt-1" style="display:none;">กรุณาแนบรูปภาพประกอบ
+                    </div>
                 </div>
 
                 <div class="col-12 d-grid gap-2 d-md-flex justify-content-md-end">
@@ -239,8 +244,9 @@ include 'includes/header.php';
                 <ul>
                     <li><strong>หัวข้อเรื่อง:</strong> ระบุหัวข้อที่ตรงประเด็นและเข้าใจง่าย</li>
                     <li><strong>หมวดหมู่:</strong> เลือกหมวดหมู่ที่ตรงกับประเภทของปัญหามากที่สุด</li>
-                    
-                    <li><strong>สถานที่:</strong> ระบุสถานที่ที่เกิดปัญหาให้ชัดเจน เช่น ห้อง, หมายเลขห้อง, ชั้น, อาคาร </li>
+
+                    <li><strong>สถานที่:</strong> ระบุสถานที่ที่เกิดปัญหาให้ชัดเจน เช่น ห้อง, หมายเลขห้อง, ชั้น, อาคาร
+                    </li>
                     <li><strong>หมายเลขครุภัณฑ์:</strong> มรล.07.303.02/68</li>
 
                     <li><strong>รายละเอียด:</strong> อธิบายปัญหาให้ละเอียดและชัดเจนที่สุดและระบุหมายเลขครุภัณฑ์(ถ้ามี)
@@ -270,6 +276,28 @@ include 'includes/header.php';
         justify-content: center;
     }
 </style>
+
+<script>
+    document.querySelector('form').addEventListener('submit', function (e) {
+        var imageInput = document.getElementById('image');
+        var imageError = document.getElementById('image-error');
+
+        if (!imageInput.files || imageInput.files.length === 0) {
+            e.preventDefault();
+            imageInput.classList.add('is-invalid');
+            if (imageError) imageError.style.display = 'block';
+            imageInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+
+    document.getElementById('image').addEventListener('change', function () {
+        var imageError = document.getElementById('image-error');
+        if (this.files && this.files.length > 0) {
+            this.classList.remove('is-invalid');
+            if (imageError) imageError.style.display = 'none';
+        }
+    });
+</script>
 
 <?php
 // แสดงส่วน footer

@@ -209,6 +209,9 @@ include 'includes/header.php';
             <a href="my_requests.php" class="btn btn-secondary">
                 <i class="bx bx-arrow-back me-1"></i>กลับ
             </a>
+            <a href="print_request.php?id=<?php echo $request_id; ?>" class="btn btn-danger" target="_blank">
+                <i class="bx bxs-file-pdf me-1"></i>รายงาน PDF
+            </a>
         <?php endif; ?>
     </div>
 </div>
@@ -355,57 +358,60 @@ include 'includes/header.php';
             </div>
         </div>
 
-        <?php if (!empty($request['asset_number']) && $asset_history && mysqli_num_rows($asset_history) > 0): ?>
-        <!-- ประวัติการซ่อมของครุภัณฑ์นี้ -->
-        <div class="card shadow mb-4 border-warning">
-            <div class="card-header py-3" style="background-color: #FFF8E7;">
-                <h6 class="m-0 fw-bold text-warning">
-                    <i class="bx bx-history me-2"></i>ประวัติการซ่อมครุภัณฑ์หมายเลข
-                    <span class="text-dark"><?php echo htmlspecialchars($request['asset_number']); ?></span>
-                    <span class="badge bg-warning text-dark ms-2">ซ่อมแล้วทั้งหมด <?php echo $asset_repair_count; ?> ครั้ง</span>
-                </h6>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light">
-                            <tr>
-                                <th>#</th>
-                                <th>เรื่อง</th>
-                                <th class="text-center">สถานะ</th>
-                                <th>วันที่แจ้ง</th>
-                                <th>วันที่เสร็จ</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while ($ah = mysqli_fetch_assoc($asset_history)): ?>
-                                <?php
-                                $status_badges = [
-                                    'pending'     => '<span class="badge bg-warning text-dark">รอดำเนินการ</span>',
-                                    'in_progress' => '<span class="badge bg-info text-white">กำลังดำเนินการ</span>',
-                                    'completed'   => '<span class="badge bg-success">เสร็จสิ้น</span>',
-                                    'rejected'    => '<span class="badge bg-danger">ยกเลิก</span>'
-                                ];
-                                ?>
+        <?php if (!empty($request['asset_number']) && $asset_history && mysqli_num_rows($asset_history) > 0 && in_array($_SESSION['role'], ['admin', 'building_staff'])): ?>
+            <!-- ประวัติการซ่อมของครุภัณฑ์นี้ (แสดงเฉพาะ admin/building_staff) -->
+            <div class="card shadow mb-4 border-warning">
+                <div class="card-header py-3" style="background-color: #FFF8E7;">
+                    <h6 class="m-0 fw-bold text-warning">
+                        <i class="bx bx-history me-2"></i>ประวัติการซ่อมครุภัณฑ์หมายเลข
+                        <span class="text-dark"><?php echo htmlspecialchars($request['asset_number']); ?></span>
+                        <span class="badge bg-warning text-dark ms-2">ซ่อมแล้วทั้งหมด <?php echo $asset_repair_count; ?>
+                            ครั้ง</span>
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
                                 <tr>
-                                    <td>#<?php echo $ah['request_id']; ?></td>
-                                    <td><?php echo htmlspecialchars($ah['title']); ?></td>
-                                    <td class="text-center"><?php echo $status_badges[$ah['status']] ?? '-'; ?></td>
-                                    <td><?php echo thai_date($ah['created_at'], 'j M Y'); ?></td>
-                                    <td><?php echo $ah['completed_date'] ? thai_date($ah['completed_date'], 'j M Y') : '-'; ?></td>
-                                    <td>
-                                        <a href="view_request.php?id=<?php echo $ah['request_id']; ?>" class="btn btn-sm btn-outline-primary">
-                                            <i class="bx bx-show-alt"></i>
-                                        </a>
-                                    </td>
+                                    <th>#</th>
+                                    <th>เรื่อง</th>
+                                    <th class="text-center">สถานะ</th>
+                                    <th>วันที่แจ้ง</th>
+                                    <th>วันที่เสร็จ</th>
+                                    <th></th>
                                 </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php while ($ah = mysqli_fetch_assoc($asset_history)): ?>
+                                    <?php
+                                    $status_badges = [
+                                        'pending' => '<span class="badge bg-warning text-dark">รอดำเนินการ</span>',
+                                        'in_progress' => '<span class="badge bg-info text-white">กำลังดำเนินการ</span>',
+                                        'completed' => '<span class="badge bg-success">เสร็จสิ้น</span>',
+                                        'rejected' => '<span class="badge bg-danger">ยกเลิก</span>'
+                                    ];
+                                    ?>
+                                    <tr>
+                                        <td>#<?php echo $ah['request_id']; ?></td>
+                                        <td><?php echo htmlspecialchars($ah['title']); ?></td>
+                                        <td class="text-center"><?php echo $status_badges[$ah['status']] ?? '-'; ?></td>
+                                        <td><?php echo thai_date($ah['created_at'], 'j M Y'); ?></td>
+                                        <td><?php echo $ah['completed_date'] ? thai_date($ah['completed_date'], 'j M Y') : '-'; ?>
+                                        </td>
+                                        <td>
+                                            <a href="view_request.php?id=<?php echo $ah['request_id']; ?>"
+                                                class="btn btn-sm btn-outline-primary">
+                                                <i class="bx bx-show-alt"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
         <?php endif; ?>
     </div>
 
