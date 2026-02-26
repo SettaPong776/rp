@@ -58,31 +58,42 @@ if (in_array($_SESSION['role'], ['admin', 'building_staff']) && isset($_POST['up
     $admin_remark = trim($_POST['admin_remark']);
     $new_priority = trim($_POST['new_priority']);
 
-    // อัพโหลดรูปภาพ
-    $file_path = "";
-    if (isset($_FILES['update_image']) && $_FILES['update_image']['error'] === 0) {
-        $file_tmp = $_FILES['update_image']['tmp_name'];
-        $file_name = basename($_FILES['update_image']['name']);
-        $file_size = $_FILES['update_image']['size'];
-        $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+    // อัพโหลดรูปภาพหลายรูป (สูงสุด 5 รูป)
+    $file_paths = [];
+    if (isset($_FILES['update_images']) && !empty(array_filter($_FILES['update_images']['size']))) {
+        $upload_dir = 'uploads/';
         $allowed_ext = ['jpg', 'jpeg', 'png', 'gif'];
+        if (!is_dir($upload_dir))
+            mkdir($upload_dir, 0777, true);
 
-        if (in_array($file_ext, $allowed_ext) && $file_size <= 5 * 1024 * 1024) {
-            $upload_dir = 'uploads/';
-            if (!is_dir($upload_dir))
-                mkdir($upload_dir, 0777, true);
-
-            $new_file_name = uniqid() . '.' . $file_ext;
-            $file_path = $upload_dir . $new_file_name;
-
-            if (!move_uploaded_file($file_tmp, $file_path)) {
-                $error = "ไม่สามารถอัพโหลดไฟล์ได้";
-                $file_path = null;
-            }
+        $file_count = count($_FILES['update_images']['name']);
+        if ($file_count > 5) {
+            $error = 'อัพโหลดได้สูงสุด 5 รูปเท่านั้น';
         } else {
-            $error = "ไฟล์ไม่ถูกต้อง หรือ ขนาดเกิน 5MB";
+            for ($i = 0; $i < $file_count; $i++) {
+                if ($_FILES['update_images']['error'][$i] !== UPLOAD_ERR_OK || $_FILES['update_images']['size'][$i] == 0)
+                    continue;
+                $file_ext = strtolower(pathinfo(basename($_FILES['update_images']['name'][$i]), PATHINFO_EXTENSION));
+                if (!in_array($file_ext, $allowed_ext)) {
+                    $error = "ไฟล์ '" . htmlspecialchars($_FILES['update_images']['name'][$i]) . "' ไม่ใช่นามสกุลที่รองรับ";
+                    break;
+                }
+                if ($_FILES['update_images']['size'][$i] > 5 * 1024 * 1024) {
+                    $error = "ไฟล์ '" . htmlspecialchars($_FILES['update_images']['name'][$i]) . "' มีขนาดเกิน 5MB";
+                    break;
+                }
+                $new_name = uniqid() . '_' . $i . '.' . $file_ext;
+                $dest = $upload_dir . $new_name;
+                if (move_uploaded_file($_FILES['update_images']['tmp_name'][$i], $dest)) {
+                    $file_paths[] = $dest;
+                } else {
+                    $error = 'เกิดข้อผิดพลาดในการอัพโหลดไฟล์';
+                    break;
+                }
+            }
         }
     }
+    $file_path = empty($file_paths) ? '' : json_encode($file_paths, JSON_UNESCAPED_UNICODE);
 
     // อัพเดตสถานะในฐานข้อมูล
     if ($new_status == 'completed') {
@@ -339,10 +350,30 @@ include 'includes/header.php';
                 <?php if ($request['image']): ?>
                     <div class="mt-4">
                         <h6 class="fw-bold">รูปภาพประกอบ</h6>
-                        <a href="<?php echo $request['image']; ?>" target="_blank">
-                            <img src="<?php echo $request['image']; ?>" alt="รูปภาพประกอบการแจ้งซ่อม"
-                                class="img-fluid img-thumbnail" style="max-height: 300px;">
-                        </a>
+                        <?php
+                        // รองรับทั้ง JSON array (ใหม่) และ path เดียว (เก่า)
+                        $img_decoded = json_decode($request['image'], true);
+                        if (is_array($img_decoded) && count($img_decoded) > 0) {
+                            $images_list = $img_decoded;
+                        } elseif (!empty($request['image'])) {
+                            $images_list = [$request['image']];
+                        } else {
+                            $images_list = [];
+                        }
+                        ?>
+                        <div class="d-flex flex-wrap gap-2">
+                            <?php foreach ($images_list as $idx => $img_path): ?>
+                                <a href="<?php echo htmlspecialchars($img_path); ?>" target="_blank"
+                                    title="รูปที่ <?php echo $idx + 1; ?>">
+                                    <img src="<?php echo htmlspecialchars($img_path); ?>"
+                                        alt="รูปภาพประกอบที่ <?php echo $idx + 1; ?>" class="img-thumbnail"
+                                        style="width:120px;height:120px;object-fit:cover;">
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php if (count($images_list) > 1): ?>
+                            <div class="form-text mt-1">คลิกที่รูปเพื่อดูขนาดเต็ม (<?php echo count($images_list); ?> รูป)</div>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
 
@@ -481,10 +512,16 @@ include 'includes/header.php';
 
                                     <?php if ($history['image']): ?>
                                         <div class="timeline-item-images mt-2 d-flex flex-wrap gap-2">
-                                            <a href="<?php echo $history['image']; ?>" target="_blank">
-                                                <img src="<?php echo $history['image']; ?>" class="img-fluid img-thumbnail"
-                                                    style="width: 80px; height: 80px; object-fit: cover;">
-                                            </a>
+                                            <?php
+                                            $h_decoded = json_decode($history['image'], true);
+                                            $h_images = is_array($h_decoded) ? $h_decoded : [$history['image']];
+                                            foreach ($h_images as $h_img):
+                                                ?>
+                                                <a href="<?php echo htmlspecialchars($h_img); ?>" target="_blank">
+                                                    <img src="<?php echo htmlspecialchars($h_img); ?>" class="img-thumbnail"
+                                                        style="width:70px;height:70px;object-fit:cover;">
+                                                </a>
+                                            <?php endforeach; ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>
@@ -558,10 +595,13 @@ include 'includes/header.php';
                                 </div>
 
                                 <div class="mt-2">
-                                    <label class="form-label">แนบรูปภาพ (ถ้ามี)</label>
-                                    <input type="file" name="update_image" class="form-control" accept="image/*">
-                                    <input type="hidden" name="history_id" value="<?= $history_id; ?>">
-                                    <div class="form-text">jpg, jpeg, png, gif (ไม่เกิน 5MB)</div>
+                                    <label class="form-label">แนบรูปภาพ (ถ้ามี) <span class="text-muted small">สูงสุด 5
+                                            รูป</span></label>
+                                    <input type="file" name="update_images[]" id="update_images" class="form-control"
+                                        accept="image/*" multiple>
+                                    <div class="form-text">jpg, jpeg, png, gif (ไม่เกิน 5MB ต่อรูป)</div>
+                                    <div id="update-image-error" class="text-danger small mt-1" style="display:none;"></div>
+                                    <div id="update-image-preview" class="d-flex flex-wrap gap-2 mt-2"></div>
                                 </div>
                             </div>
                         </div>
@@ -624,6 +664,68 @@ include 'includes/header.php';
             padding-bottom: 0;
         }
     </style>
+
+    <script>
+    (function () {
+        const input    = document.getElementById('update_images');
+        const errBox   = document.getElementById('update-image-error');
+        const preview  = document.getElementById('update-image-preview');
+        const MAX      = 5;
+
+        if (!input) return;
+
+        input.addEventListener('change', function () {
+            preview.innerHTML = '';
+            errBox.style.display = 'none';
+            input.classList.remove('is-invalid');
+
+            const files = Array.from(this.files);
+            if (files.length > MAX) {
+                errBox.textContent = `\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e44\u0e14\u0e49\u0e2a\u0e39\u0e07\u0e2a\u0e38\u0e14 ${MAX} \u0e23\u0e39\u0e1b\u0e40\u0e17\u0e48\u0e32\u0e19\u0e31\u0e49\u0e19 (\u0e04\u0e38\u0e13\u0e40\u0e25\u0e37\u0e2d\u0e01 ${files.length} \u0e23\u0e39\u0e1b)`;
+                errBox.style.display = 'block';
+                input.classList.add('is-invalid');
+                input.value = '';
+                return;
+            }
+
+            files.forEach((file, idx) => {
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const wrap  = document.createElement('div');
+                    wrap.className = 'position-relative';
+                    wrap.style.cssText = 'width:70px;height:70px;';
+
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'img-thumbnail';
+                    img.style.cssText = 'width:70px;height:70px;object-fit:cover;';
+
+                    const badge = document.createElement('span');
+                    badge.className = 'position-absolute top-0 start-0 badge bg-primary';
+                    badge.style.fontSize = '0.6rem';
+                    badge.textContent = `\u0e23\u0e39\u0e1b ${idx + 1}`;
+
+                    wrap.appendChild(img);
+                    wrap.appendChild(badge);
+                    preview.appendChild(wrap);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        // reset preview \u0e40\u0e21\u0e37\u0e48\u0e2d\u0e1b\u0e34\u0e14 modal
+        const modal = document.getElementById('updateStatusModal');
+        if (modal) {
+            modal.addEventListener('hidden.bs.modal', function () {
+                preview.innerHTML = '';
+                errBox.style.display = 'none';
+                input.value = '';
+                input.classList.remove('is-invalid');
+            });
+        }
+    })();
+    </script>
 
     <?php
     // แสดงส่วน footer

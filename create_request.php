@@ -24,52 +24,64 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $asset_number = trim($_POST['asset_number']);
     $description = trim($_POST['description']);
     $priority = 'medium'; // ค่า default - admin/building_staff จะกำหนดความสำคัญเองในภายหลัง
-    $image = '';
+    $image_paths = [];
 
     // ตรวจสอบว่ามีข้อมูลครบหรือไม่
     if (empty($title) || empty($category_id) || empty($description) || empty($location)) {
         $error = 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน';
-    } elseif (!isset($_FILES['image']) || $_FILES['image']['size'] == 0) {
-        $error = 'กรุณาแนบรูปภาพประกอบการแจ้งซ่อม';
+    } elseif (!isset($_FILES['images']) || empty(array_filter($_FILES['images']['size']))) {
+        $error = 'กรุณาแนบรูปภาพประกอบการแจ้งซ่อมอย่างน้อย 1 รูป';
     } else {
-        // จัดการการอัพโหลดรูปภาพ (ถ้ามี)
-        if (isset($_FILES['image']) && $_FILES['image']['size'] > 0) {
-            $upload_dir = 'uploads/';
-            $file_name = basename($_FILES['image']['name']);
-            $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-            $new_file_name = uniqid() . '.' . $file_ext;
-            $upload_path = $upload_dir . $new_file_name;
+        // จัดการการอัพโหลดรูปภาพหลายรูป (สูงสุด 5 รูป)
+        $upload_dir = 'uploads/';
+        if (!file_exists($upload_dir)) {
+            mkdir($upload_dir, 0777, true);
+        }
 
-            // ตรวจสอบนามสกุลไฟล์
-            $allowed_exts = ['jpg', 'jpeg', 'png', 'gif'];
-            if (!in_array($file_ext, $allowed_exts)) {
-                $error = 'อัพโหลดได้เฉพาะไฟล์รูปภาพ (jpg, jpeg, png, gif) เท่านั้น';
-            } else {
-                // ตรวจสอบขนาดไฟล์ (ไม่เกิน 5MB)
-                if ($_FILES['image']['size'] > 5000000) {
-                    $error = 'ขนาดไฟล์ต้องไม่เกิน 5MB';
+        $allowed_exts = ['jpg', 'jpeg', 'png', 'gif'];
+        $file_count = count($_FILES['images']['name']);
+
+        if ($file_count > 5) {
+            $error = 'อัพโหลดได้สูงสุด 5 รูปเท่านั้น';
+        } else {
+            for ($i = 0; $i < $file_count; $i++) {
+                if ($_FILES['images']['error'][$i] !== UPLOAD_ERR_OK || $_FILES['images']['size'][$i] == 0) {
+                    continue;
+                }
+
+                $file_name = basename($_FILES['images']['name'][$i]);
+                $file_ext  = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+                if (!in_array($file_ext, $allowed_exts)) {
+                    $error = "ไฟล์ '{$file_name}' ไม่ใช่ไฟล์รูปภาพที่รองรับ (jpg, jpeg, png, gif)";
+                    break;
+                }
+
+                if ($_FILES['images']['size'][$i] > 5000000) {
+                    $error = "ไฟล์ '{$file_name}' มีขนาดเกิน 5MB";
+                    break;
+                }
+
+                $new_file_name = uniqid() . '_' . $i . '.' . $file_ext;
+                $upload_path   = $upload_dir . $new_file_name;
+
+                if (move_uploaded_file($_FILES['images']['tmp_name'][$i], $upload_path)) {
+                    $image_paths[] = $upload_path;
                 } else {
-                    // สร้างโฟลเดอร์ uploads ถ้ายังไม่มี
-                    if (!file_exists($upload_dir)) {
-                        mkdir($upload_dir, 0777, true);
-                    }
-
-                    // อัพโหลดไฟล์
-                    if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_path)) {
-                        $image = $upload_path;
-                    } else {
-                        $error = 'เกิดข้อผิดพลาดในการอัพโหลดไฟล์';
-                    }
+                    $error = 'เกิดข้อผิดพลาดในการอัพโหลดไฟล์';
+                    break;
                 }
             }
         }
+
+        $image = json_encode($image_paths, JSON_UNESCAPED_UNICODE);
 
         if (!isset($error)) {
             // บันทึกข้อมูลลงในฐานข้อมูล
             $request_id = db_insert(
                 "INSERT INTO repair_requests (user_id, category_id, title, description, location, asset_number, priority, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 "iissssss",
-                [$user_id, $category_id, $title, $description, $location, $asset_number, $priority, $image]
+                [$user_id, $category_id, $title, $description, $location, $asset_number, $priority, $image ?? '']
             );
 
             if ($request_id) {
@@ -206,14 +218,15 @@ include 'includes/header.php';
                 </div>
 
                 <div class="col-12">
-                    <label for="image" class="form-label">รูปภาพประกอบ <span class="text-danger">*</span></label>
-                    <div class="input-group mb-3">
-                        <span class="input-group-text bg-light"><i class="bx bx-image"></i></span>
-                        <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                    <label for="images" class="form-label">รูปภาพประกอบ <span class="text-danger">*</span> <span class="text-muted small">(สูงสุด 5 รูป)</span></label>
+                    <div class="input-group mb-2">
+                        <span class="input-group-text bg-light"><i class="bx bx-images"></i></span>
+                        <input type="file" class="form-control" id="images" name="images[]" accept="image/*" multiple>
                     </div>
-                    <div class="form-text">อัพโหลดได้เฉพาะไฟล์รูปภาพ (jpg, jpeg, png, gif) ขนาดไม่เกิน 5MB</div>
-                    <div id="image-error" class="text-danger small mt-1" style="display:none;">กรุณาแนบรูปภาพประกอบ
-                    </div>
+                    <div class="form-text">อัพโหลดได้เฉพาะไฟล์รูปภาพ (jpg, jpeg, png, gif) ขนาดไม่เกิน 5MB ต่อรูป — เลือกได้สูงสุด 5 รูป</div>
+                    <div id="image-error" class="text-danger small mt-1" style="display:none;">กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป</div>
+                    <!-- Preview รูปภาพ -->
+                    <div id="image-preview" class="d-flex flex-wrap gap-2 mt-2"></div>
                 </div>
 
                 <div class="col-12 d-grid gap-2 d-md-flex justify-content-md-end">
@@ -278,23 +291,69 @@ include 'includes/header.php';
 </style>
 
 <script>
-    document.querySelector('form').addEventListener('submit', function (e) {
-        var imageInput = document.getElementById('image');
-        var imageError = document.getElementById('image-error');
+    const imageInput   = document.getElementById('images');
+    const imageError   = document.getElementById('image-error');
+    const previewBox   = document.getElementById('image-preview');
+    const MAX_FILES    = 5;
 
-        if (!imageInput.files || imageInput.files.length === 0) {
-            e.preventDefault();
+    // Validate & Preview เมื่อเลือกไฟล์
+    imageInput.addEventListener('change', function () {
+        previewBox.innerHTML = '';
+        imageError.style.display = 'none';
+        imageInput.classList.remove('is-invalid');
+
+        const files = Array.from(this.files);
+
+        if (files.length > MAX_FILES) {
+            imageError.textContent = `เลือกได้สูงสุด ${MAX_FILES} รูปเท่านั้น (คุณเลือก ${files.length} รูป)`;
+            imageError.style.display = 'block';
             imageInput.classList.add('is-invalid');
-            if (imageError) imageError.style.display = 'block';
-            imageInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            imageInput.value = '';
+            return;
         }
+
+        files.forEach((file, idx) => {
+            if (!file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'position-relative';
+                wrapper.style.cssText = 'width:90px;height:90px;';
+
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'img-thumbnail';
+                img.style.cssText = 'width:90px;height:90px;object-fit:cover;';
+
+                const badge = document.createElement('span');
+                badge.className = 'position-absolute top-0 start-0 badge bg-primary';
+                badge.style.fontSize = '0.65rem';
+                badge.textContent = `รูป ${idx + 1}`;
+
+                wrapper.appendChild(img);
+                wrapper.appendChild(badge);
+                previewBox.appendChild(wrapper);
+            };
+            reader.readAsDataURL(file);
+        });
     });
 
-    document.getElementById('image').addEventListener('change', function () {
-        var imageError = document.getElementById('image-error');
-        if (this.files && this.files.length > 0) {
-            this.classList.remove('is-invalid');
-            if (imageError) imageError.style.display = 'none';
+    // Validate ก่อน submit
+    document.querySelector('form').addEventListener('submit', function (e) {
+        if (!imageInput.files || imageInput.files.length === 0) {
+            e.preventDefault();
+            imageError.textContent = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
+            imageError.style.display = 'block';
+            imageInput.classList.add('is-invalid');
+            imageInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        if (imageInput.files.length > MAX_FILES) {
+            e.preventDefault();
+            imageError.textContent = `เลือกได้สูงสุด ${MAX_FILES} รูปเท่านั้น`;
+            imageError.style.display = 'block';
+            imageInput.classList.add('is-invalid');
         }
     });
 </script>
