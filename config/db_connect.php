@@ -221,3 +221,35 @@ function insert_request_history($request_id, $user_id, $status, $remark = '', $i
     $query = "INSERT INTO request_history (request_id, user_id, status, remark, image) VALUES (?, ?, ?, ?, ?)";
     return db_execute($query, "iisss", [$request_id, $user_id, $status, $remark, $image_path]);
 }
+
+/**
+ * รายการ role ของเจ้าหน้าที่ทุกประเภท (ยกเว้น admin และ user)
+ */
+function get_all_staff_roles()
+{
+    return ['building_staff', 'electrical_staff', 'plumbing_staff', 'ac_staff'];
+}
+
+/**
+ * ตรวจสอบว่า role นั้นเป็น staff หรือ admin (มีสิทธิ์เข้าแผงควบคุม)
+ */
+function is_staff_role($role)
+{
+    return in_array($role, ['admin', 'building_staff', 'electrical_staff', 'plumbing_staff', 'ac_staff']);
+}
+
+/**
+ * แปลงค่า role เป็นชื่อภาษาไทย
+ */
+function get_role_label($role)
+{
+    $labels = [
+        'admin' => 'ผู้ดูแลระบบ',
+        'building_staff' => 'งานอาคาร',
+        'electrical_staff' => 'งานไฟฟ้า',
+        'plumbing_staff' => 'งานประปาและระบบสุขาภิบาล',
+        'ac_staff' => 'งานระบบปรับอากาศ',
+        'user' => 'ผู้ใช้งานทั่วไป',
+    ];
+    return $labels[$role] ?? 'ผู้ใช้งาน';
+}

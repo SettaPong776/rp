@@ -515,7 +515,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <div class="menu">
             <?php if ($is_logged_in): ?>
-                <?php if ($current_user['role'] == 'admin' || $current_user['role'] == 'building_staff'): ?>
+                <?php if ($current_user['role'] == 'admin' || is_staff_role($current_user['role'])): ?>
                     <!-- Admin Menu -->
                     <a href="admin_dashboard.php"
                         class="menu-item <?php echo ($current_page == 'admin_dashboard.php') ? 'active' : ''; ?>">
@@ -611,14 +611,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         alt="User Avatar">
                     <div>
                         <h6 class="mb-0"><?php echo $current_user['fullname']; ?></h6>
-                        <small class="text-muted"><?php
-                        if ($current_user['role'] == 'admin')
-                            echo 'ผู้ดูแลระบบ';
-                        elseif ($current_user['role'] == 'building_staff')
-                            echo 'งานอาคาร';
-                        else
-                            echo 'ผู้ใช้งาน';
-                        ?></small>
+                        <small class="text-muted"><?php echo get_role_label($current_user['role']); ?></small>
                     </div>
                 </div>
             <?php else: ?>

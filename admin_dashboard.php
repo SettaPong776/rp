@@ -6,7 +6,7 @@ $page_title = "แดชบอร์ดผู้ดูแลระบบ";
 require_once 'config/db_connect.php';
 
 // ตรวจสอบว่ามีการล็อกอินและเป็นแอดมินหรือไม่
-if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'building_staff'])) {
+if (!isset($_SESSION['user_id']) || !is_staff_role($_SESSION['role'])) {
     header('Location: login.php');
     exit();
 }
@@ -66,7 +66,7 @@ include 'includes/header.php';
             <a href="admin_settings.php" class="btn btn-primary">
                 <i class="bx bx-cog me-1"></i>ตั้งค่า
             </a>
-    <?php endif; ?>
+        <?php endif; ?>
     </div>
 </div>
 

@@ -6,7 +6,7 @@ $page_title = "ข้อมูลส่วนตัว";
 require_once 'config/db_connect.php';
 
 // ตรวจสอบว่ามีการล็อกอินและเป็นแอดมินหรืองานอาคารหรือไม่
-if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'building_staff'])) {
+if (!isset($_SESSION['user_id']) || !is_staff_role($_SESSION['role'])) {
     header('Location: login.php');
     exit();
 }
@@ -129,7 +129,7 @@ include 'includes/header.php';
                 <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($user['fullname']); ?>&background=random"
                     alt="User Avatar" class="rounded-circle mb-3" width="150" height="150">
                 <h4 class="fw-bold"><?php echo $user['fullname']; ?></h4>
-                <p class="text-muted"><?php echo $user['role'] == 'admin' ? 'ผู้ดูแลระบบ' : 'งานอาคาร'; ?></p>
+                <p class="text-muted"><?php echo get_role_label($user['role']); ?></p>
 
                 <div class="d-flex justify-content-center">
                     <div class="text-center px-3">

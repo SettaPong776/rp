@@ -36,7 +36,7 @@ if (!$result || mysqli_num_rows($result) == 0) {
 $request = mysqli_fetch_assoc($result);
 
 // ตรวจสอบสิทธิ์การเข้าถึง
-if (!in_array($_SESSION['role'], ['admin', 'building_staff']) && $request['user_id'] != $_SESSION['user_id']) {
+if (!is_staff_role($_SESSION['role']) && $request['user_id'] != $_SESSION['user_id']) {
     header('Location: dashboard.php');
     exit();
 }

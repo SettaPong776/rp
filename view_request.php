@@ -13,7 +13,7 @@ if (!isset($_SESSION['user_id'])) {
 
 // ตรวจสอบว่ามีการส่ง ID มาหรือไม่
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    if (in_array($_SESSION['role'], ['admin', 'building_staff'])) {
+    if (is_staff_role($_SESSION['role'])) {
         header('Location: admin_requests.php');
     } else {
         header('Location: my_requests.php');
@@ -36,7 +36,7 @@ $result = db_select(
 
 // ตรวจสอบว่ามีข้อมูลหรือไม่
 if (!$result || mysqli_num_rows($result) == 0) {
-    if (in_array($_SESSION['role'], ['admin', 'building_staff'])) {
+    if (is_staff_role($_SESSION['role'])) {
         header('Location: admin_requests.php');
     } else {
         header('Location: my_requests.php');
@@ -47,13 +47,13 @@ if (!$result || mysqli_num_rows($result) == 0) {
 $request = mysqli_fetch_assoc($result);
 
 // ตรวจสอบสิทธิ์การเข้าถึง
-if (!in_array($_SESSION['role'], ['admin', 'building_staff']) && $request['user_id'] != $_SESSION['user_id']) {
+if (!is_staff_role($_SESSION['role']) && $request['user_id'] != $_SESSION['user_id']) {
     header('Location: dashboard.php');
     exit();
 }
 
 // อัพเดตสถานะรายการแจ้งซ่อม (สำหรับแอดมิน)
-if (in_array($_SESSION['role'], ['admin', 'building_staff']) && isset($_POST['update_status'])) {
+if (is_staff_role($_SESSION['role']) && isset($_POST['update_status'])) {
     $new_status = trim($_POST['new_status']);
     $admin_remark = trim($_POST['admin_remark']);
     $new_priority = trim($_POST['new_priority']);
@@ -206,7 +206,7 @@ include 'includes/header.php';
     </h1>
     <div>
 
-        <?php if (in_array($_SESSION['role'], ['admin', 'building_staff'])): ?>
+        <?php if (is_staff_role($_SESSION['role'])): ?>
             <a href="admin_requests.php" class="btn btn-secondary">
                 <i class="bx bx-arrow-back me-1"></i>กลับ
             </a>
@@ -389,7 +389,7 @@ include 'includes/header.php';
             </div>
         </div>
 
-        <?php if (!empty($request['asset_number']) && $asset_history && mysqli_num_rows($asset_history) > 0 && in_array($_SESSION['role'], ['admin', 'building_staff'])): ?>
+        <?php if (!empty($request['asset_number']) && $asset_history && mysqli_num_rows($asset_history) > 0 && is_staff_role($_SESSION['role'])): ?>
             <!-- ประวัติการซ่อมของครุภัณฑ์นี้ (แสดงเฉพาะ admin/building_staff) -->
             <div class="card shadow mb-4 border-warning">
                 <div class="card-header py-3" style="background-color: #FFF8E7;">
@@ -540,7 +540,7 @@ include 'includes/header.php';
         </div>
     </div>
 
-    <?php if (in_array($_SESSION['role'], ['admin', 'building_staff'])): ?>
+    <?php if (is_staff_role($_SESSION['role'])): ?>
         <!-- Modal อัพเดตสถานะ -->
         <div class="modal fade" id="updateStatusModal" tabindex="-1" aria-labelledby="updateStatusModalLabel"
             aria-hidden="true">
@@ -666,65 +666,65 @@ include 'includes/header.php';
     </style>
 
     <script>
-    (function () {
-        const input    = document.getElementById('update_images');
-        const errBox   = document.getElementById('update-image-error');
-        const preview  = document.getElementById('update-image-preview');
-        const MAX      = 5;
+        (function () {
+            const input = document.getElementById('update_images');
+            const errBox = document.getElementById('update-image-error');
+            const preview = document.getElementById('update-image-preview');
+            const MAX = 5;
 
-        if (!input) return;
+            if (!input) return;
 
-        input.addEventListener('change', function () {
-            preview.innerHTML = '';
-            errBox.style.display = 'none';
-            input.classList.remove('is-invalid');
-
-            const files = Array.from(this.files);
-            if (files.length > MAX) {
-                errBox.textContent = `\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e44\u0e14\u0e49\u0e2a\u0e39\u0e07\u0e2a\u0e38\u0e14 ${MAX} \u0e23\u0e39\u0e1b\u0e40\u0e17\u0e48\u0e32\u0e19\u0e31\u0e49\u0e19 (\u0e04\u0e38\u0e13\u0e40\u0e25\u0e37\u0e2d\u0e01 ${files.length} \u0e23\u0e39\u0e1b)`;
-                errBox.style.display = 'block';
-                input.classList.add('is-invalid');
-                input.value = '';
-                return;
-            }
-
-            files.forEach((file, idx) => {
-                if (!file.type.startsWith('image/')) return;
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const wrap  = document.createElement('div');
-                    wrap.className = 'position-relative';
-                    wrap.style.cssText = 'width:70px;height:70px;';
-
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.className = 'img-thumbnail';
-                    img.style.cssText = 'width:70px;height:70px;object-fit:cover;';
-
-                    const badge = document.createElement('span');
-                    badge.className = 'position-absolute top-0 start-0 badge bg-primary';
-                    badge.style.fontSize = '0.6rem';
-                    badge.textContent = `\u0e23\u0e39\u0e1b ${idx + 1}`;
-
-                    wrap.appendChild(img);
-                    wrap.appendChild(badge);
-                    preview.appendChild(wrap);
-                };
-                reader.readAsDataURL(file);
-            });
-        });
-
-        // reset preview \u0e40\u0e21\u0e37\u0e48\u0e2d\u0e1b\u0e34\u0e14 modal
-        const modal = document.getElementById('updateStatusModal');
-        if (modal) {
-            modal.addEventListener('hidden.bs.modal', function () {
+            input.addEventListener('change', function () {
                 preview.innerHTML = '';
                 errBox.style.display = 'none';
-                input.value = '';
                 input.classList.remove('is-invalid');
+
+                const files = Array.from(this.files);
+                if (files.length > MAX) {
+                    errBox.textContent = `\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e44\u0e14\u0e49\u0e2a\u0e39\u0e07\u0e2a\u0e38\u0e14 ${MAX} \u0e23\u0e39\u0e1b\u0e40\u0e17\u0e48\u0e32\u0e19\u0e31\u0e49\u0e19 (\u0e04\u0e38\u0e13\u0e40\u0e25\u0e37\u0e2d\u0e01 ${files.length} \u0e23\u0e39\u0e1b)`;
+                    errBox.style.display = 'block';
+                    input.classList.add('is-invalid');
+                    input.value = '';
+                    return;
+                }
+
+                files.forEach((file, idx) => {
+                    if (!file.type.startsWith('image/')) return;
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const wrap = document.createElement('div');
+                        wrap.className = 'position-relative';
+                        wrap.style.cssText = 'width:70px;height:70px;';
+
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'img-thumbnail';
+                        img.style.cssText = 'width:70px;height:70px;object-fit:cover;';
+
+                        const badge = document.createElement('span');
+                        badge.className = 'position-absolute top-0 start-0 badge bg-primary';
+                        badge.style.fontSize = '0.6rem';
+                        badge.textContent = `\u0e23\u0e39\u0e1b ${idx + 1}`;
+
+                        wrap.appendChild(img);
+                        wrap.appendChild(badge);
+                        preview.appendChild(wrap);
+                    };
+                    reader.readAsDataURL(file);
+                });
             });
-        }
-    })();
+
+            // reset preview \u0e40\u0e21\u0e37\u0e48\u0e2d\u0e1b\u0e34\u0e14 modal
+            const modal = document.getElementById('updateStatusModal');
+            if (modal) {
+                modal.addEventListener('hidden.bs.modal', function () {
+                    preview.innerHTML = '';
+                    errBox.style.display = 'none';
+                    input.value = '';
+                    input.classList.remove('is-invalid');
+                });
+            }
+        })();
     </script>
 
     <?php

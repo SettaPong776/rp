@@ -8,7 +8,7 @@ require_once 'config/db_connect.php';
 // ตรวจสอบว่ามีการล็อกอินหรือไม่
 if (isset($_SESSION['user_id'])) {
     // ถ้าล็อกอินแล้ว ให้ redirect ไปยังหน้าที่เหมาะสม
-    if (in_array($_SESSION['role'], ['admin', 'building_staff'])) {
+    if (is_staff_role($_SESSION['role'])) {
         header('Location: admin_dashboard.php');
     } else {
         header('Location: dashboard.php');

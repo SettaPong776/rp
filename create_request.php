@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
 
                 $file_name = basename($_FILES['images']['name'][$i]);
-                $file_ext  = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+                $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
 
                 if (!in_array($file_ext, $allowed_exts)) {
                     $error = "ไฟล์ '{$file_name}' ไม่ใช่ไฟล์รูปภาพที่รองรับ (jpg, jpeg, png, gif)";
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
 
                 $new_file_name = uniqid() . '_' . $i . '.' . $file_ext;
-                $upload_path   = $upload_dir . $new_file_name;
+                $upload_path = $upload_dir . $new_file_name;
 
                 if (move_uploaded_file($_FILES['images']['tmp_name'][$i], $upload_path)) {
                     $image_paths[] = $upload_path;
@@ -218,19 +218,22 @@ include 'includes/header.php';
                 </div>
 
                 <div class="col-12">
-                    <label for="images" class="form-label">รูปภาพประกอบ <span class="text-danger">*</span> <span class="text-muted small">(สูงสุด 5 รูป)</span></label>
+                    <label for="images" class="form-label">รูปภาพประกอบ <span class="text-danger">*</span> <span
+                            class="text-muted small">(สูงสุด 5 รูป)</span></label>
                     <div class="input-group mb-2">
                         <span class="input-group-text bg-light"><i class="bx bx-images"></i></span>
                         <input type="file" class="form-control" id="images" name="images[]" accept="image/*" multiple>
                     </div>
-                    <div class="form-text">อัพโหลดได้เฉพาะไฟล์รูปภาพ (jpg, jpeg, png, gif) ขนาดไม่เกิน 5MB ต่อรูป — เลือกได้สูงสุด 5 รูป</div>
-                    <div id="image-error" class="text-danger small mt-1" style="display:none;">กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป</div>
+                    <div class="form-text">อัพโหลดได้เฉพาะไฟล์รูปภาพ (jpg, jpeg, png, gif) ขนาดไม่เกิน 5MB ต่อรูป —
+                        เลือกได้สูงสุด 5 รูป</div>
+                    <div id="image-error" class="text-danger small mt-1" style="display:none;">
+                        กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป</div>
                     <!-- Preview รูปภาพ -->
                     <div id="image-preview" class="d-flex flex-wrap gap-2 mt-2"></div>
                 </div>
 
                 <div class="col-12 d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="<?php echo in_array($_SESSION['role'], ['admin', 'building_staff']) ? 'admin_dashboard.php' : 'dashboard.php'; ?>"
+                    <a href="<?php echo is_staff_role($_SESSION['role']) ? 'admin_dashboard.php' : 'dashboard.php'; ?>"
                         class="btn btn-secondary">
                         <i class="bx bx-arrow-back me-1"></i>ยกเลิก
                     </a>
@@ -291,10 +294,10 @@ include 'includes/header.php';
 </style>
 
 <script>
-    const imageInput   = document.getElementById('images');
-    const imageError   = document.getElementById('image-error');
-    const previewBox   = document.getElementById('image-preview');
-    const MAX_FILES    = 5;
+    const imageInput = document.getElementById('images');
+    const imageError = document.getElementById('image-error');
+    const previewBox = document.getElementById('image-preview');
+    const MAX_FILES = 5;
 
     // Validate & Preview เมื่อเลือกไฟล์
     imageInput.addEventListener('change', function () {

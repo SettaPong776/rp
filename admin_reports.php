@@ -6,7 +6,7 @@ $page_title = "รายงาน";
 require_once 'config/db_connect.php';
 
 // ตรวจสอบว่ามีการล็อกอินและเป็นแอดมินหรือไม่
-if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'building_staff'])) {
+if (!isset($_SESSION['user_id']) || !is_staff_role($_SESSION['role'])) {
     header('Location: login.php');
     exit();
 }

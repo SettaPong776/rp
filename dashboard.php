@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // ตรวจสอบว่าเป็นผู้ใช้ทั่วไป (ไม่ใช่แอดมิน)
-if (in_array($_SESSION['role'], ['admin', 'building_staff'])) {
+if (is_staff_role($_SESSION['role'])) {
     header('Location: admin_dashboard.php');
     exit();
 }
