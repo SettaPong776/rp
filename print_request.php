@@ -1256,103 +1256,144 @@ $status_bg = [
 
 
     <?php
-    // ดึงรูปภาพจากประวัติทั้งหมด
-    $all_history_images = db_select(
-        "SELECT h.image, h.status, h.created_at, u.fullname 
-         FROM request_history h 
-         JOIN users u ON h.user_id = u.user_id 
+    // ---- รวบรวมรูปภาพทั้งหมดจาก case นี้ ----
+    $all_images_flat = [];
+
+    // 1) รูปภาพหลักที่แนบตอนแจ้งซ่อม
+    if (!empty($request['image'])) {
+        $main_decoded = json_decode($request['image'], true);
+        $main_list    = (is_array($main_decoded) && count($main_decoded) > 0) ? $main_decoded : [$request['image']];
+        foreach ($main_list as $idx => $path) {
+            $all_images_flat[] = [
+                'path'    => $path,
+                'caption' => 'รูปภาพประกอบการแจ้งซ่อม' . (count($main_list) > 1 ? ' (รูปที่ ' . ($idx + 1) . ')' : ''),
+                'meta'    => 'แนบพร้อมการแจ้งซ่อม · ' . thai_date($request['created_at'], 'j F Y H:i น.'),
+            ];
+        }
+    }
+
+    // 2) รูปภาพจากประวัติการดำเนินการทุกครั้ง
+    $hist_imgs_result = db_select(
+        "SELECT h.image, h.status, h.created_at, u.fullname
+         FROM request_history h
+         JOIN users u ON h.user_id = u.user_id
          WHERE h.request_id = ? AND h.image IS NOT NULL AND h.image != ''
          ORDER BY h.created_at ASC",
         "i",
         [$request_id]
     );
+    if ($hist_imgs_result && mysqli_num_rows($hist_imgs_result) > 0) {
+        while ($hrow = mysqli_fetch_assoc($hist_imgs_result)) {
+            $h_decoded = json_decode($hrow['image'], true);
+            $h_list    = (is_array($h_decoded) && count($h_decoded) > 0) ? $h_decoded : [$hrow['image']];
+            $status_label = $status_texts[$hrow['status']] ?? $hrow['status'];
+            foreach ($h_list as $hidx => $hpath) {
+                $all_images_flat[] = [
+                    'path'    => $hpath,
+                    'caption' => 'รูปภาพการดำเนินการ: ' . $status_label . (count($h_list) > 1 ? ' (รูปที่ ' . ($hidx + 1) . ')' : ''),
+                    'meta'    => 'โดย ' . htmlspecialchars($hrow['fullname']) . ' · ' . thai_date($hrow['created_at'], 'j F Y H:i น.'),
+                ];
+            }
+        }
+    }
 
-    $has_main_image = !empty($request['image']);
-    $has_history_images = $all_history_images && mysqli_num_rows($all_history_images) > 0;
-
-    if ($has_main_image || $has_history_images):
-        ?>
-        <!-- หน้าที่ 2: รูปภาพ -->
-        <div class="page" style="page-break-before: always; margin-top: 30px;">
-            <!-- Header หน้า 2 -->
-            <div class="header">
-                <div class="header-content">
-                    <div class="header-left">
-                        <img src="assets/images/favicon.png" alt="Logo"
-                            style="width: 55px; height: 55px; object-fit: contain;">
-                        <div class="header-text">
-                            <h1>รูปภาพประกอบ</h1>
-                            <div class="subtitle">ใบแจ้งซ่อมเลขที่ <?php echo str_pad($request_id, 5, '0', STR_PAD_LEFT); ?>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="header-right">
-                        <div class="request-number">เลขที่ <?php echo str_pad($request_id, 5, '0', STR_PAD_LEFT); ?></div>
-                        <div class="print-date">วันที่พิมพ์: <?php echo thai_date(date('Y-m-d H:i:s'), 'j F Y'); ?></div>
+    // แสดงหน้ารูปภาพเฉพาะเมื่อมีรูป
+    if (count($all_images_flat) > 0):
+        // แบ่งรูปเป็น chunk ๆ ละ 2 รูปต่อหน้า
+        $img_chunks = array_chunk($all_images_flat, 2);
+        $page_num   = 2;
+        foreach ($img_chunks as $chunk):
+    ?>
+    <!-- หน้ารูปภาพ #<?php echo $page_num; ?> -->
+    <div class="page" style="page-break-before: always; margin-top: 30px;">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <img src="assets/images/favicon.png" alt="Logo"
+                        style="width: 55px; height: 55px; object-fit: contain;">
+                    <div class="header-text">
+                        <h1>รูปภาพประกอบ</h1>
+                        <div class="subtitle">ใบแจ้งซ่อมเลขที่ <?php echo str_pad($request_id, 5, '0', STR_PAD_LEFT); ?></div>
                     </div>
                 </div>
-            </div>
-
-            <div class="content">
-                <?php if ($has_main_image): ?>
-                    <!-- รูปภาพหลัก -->
-                    <div class="card" style="margin-bottom: 16px;">
-                        <div class="card-header">
-                            <div class="card-icon">A</div>
-                            <div class="card-title">รูปภาพประกอบการแจ้งซ่อม</div>
-                        </div>
-                        <div class="card-body" style="text-align: center;">
-                            <img src="<?php echo htmlspecialchars($request['image'] ?? ''); ?>" alt="รูปภาพประกอบ"
-                                style="max-width: 100%; max-height: 280px; border-radius: 8px; border: 1px solid var(--border);">
-                            <p style="margin-top: 8px; color: var(--text-light); font-size: 11px;">
-                                รูปภาพที่แนบมาพร้อมการแจ้งซ่อม</p>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($has_history_images): ?>
-                    <!-- รูปภาพจากประวัติการดำเนินการ -->
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-icon">B</div>
-                            <div class="card-title">รูปภาพจากการดำเนินการ</div>
-                        </div>
-                        <div class="card-body">
-                            <div style="display: flex; flex-direction: column; gap: 16px;">
-                                <?php while ($img = mysqli_fetch_assoc($all_history_images)): ?>
-                                    <div
-                                        style="background: var(--bg-light); padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; text-align: center;">
-                                        <img src="<?php echo htmlspecialchars($img['image'] ?? ''); ?>" alt="รูปภาพ"
-                                            style="max-width: 100%; max-height: 280px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 8px;">
-                                        <div style="font-size: 11px; color: var(--text-dark);">
-                                            <strong><?php echo $status_texts[$img['status']] ?? $img['status']; ?></strong>
-                                            <span style="color: var(--text-light);"> - โดย
-                                                <?php echo htmlspecialchars($img['fullname'] ?? ''); ?></span>
-                                        </div>
-                                        <div style="font-size: 10px; color: var(--text-light);">
-                                            <?php echo thai_date($img['created_at'], 'j F Y H:i น.'); ?>
-                                        </div>
-                                    </div>
-                                <?php endwhile; ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Footer หน้า 2 -->
-            <div class="footer">
-                <div class="footer-left">
-                    <strong><?php echo $settings['site_name'] ?? 'ระบบแจ้งซ่อมออนไลน์'; ?> มหาวิทยาลัยราชภัฏเลย</strong> |
-                    ใบแจ้งซ่อมเลขที่
-                    <?php echo str_pad($request_id, 5, '0', STR_PAD_LEFT); ?>
-                </div>
-                <div class="footer-right">
-                    หน้า 2
+                <div class="header-right">
+                    <div class="request-number">เลขที่ <?php echo str_pad($request_id, 5, '0', STR_PAD_LEFT); ?></div>
+                    <div class="print-date">วันที่พิมพ์: <?php echo thai_date(date('Y-m-d H:i:s'), 'j F Y'); ?></div>
                 </div>
             </div>
         </div>
-    <?php endif; ?>
-</body>
 
+        <!-- รูปภาพ 1-2 รูปต่อหน้า -->
+        <div class="content" style="display: flex; flex-direction: column; gap: 16px; padding: 16px 25px;">
+            <?php foreach ($chunk as $img_item): ?>
+            <div style="
+                flex: 1;
+                border: 1.5px solid #e2e8f0;
+                border-radius: 10px;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                background: #f8fafc;
+            ">
+                <!-- caption bar -->
+                <div style="
+                    background: linear-gradient(135deg, #2563EB 0%, #3B82F6 100%);
+                    color: #fff;
+                    padding: 8px 14px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                ">
+                    <span style="font-size: 12px; font-weight: 700;"><?php echo $img_item['caption']; ?></span>
+                    <span style="font-size: 10px; opacity: 0.85;"><?php echo $img_item['meta']; ?></span>
+                </div>
+                <!-- รูปภาพ -->
+                <div style="
+                    flex: 1;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 12px;
+                    min-height: 280px;
+                ">
+                    <img src="<?php echo htmlspecialchars($img_item['path']); ?>"
+                         alt="<?php echo htmlspecialchars($img_item['caption']); ?>"
+                         style="
+                             max-width: 100%;
+                             max-height: 320px;
+                             width: auto;
+                             height: auto;
+                             object-fit: contain;
+                             border-radius: 6px;
+                             border: 1px solid #e2e8f0;
+                             -webkit-print-color-adjust: exact;
+                             print-color-adjust: exact;
+                         ">
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-left">
+                <strong><?php echo $settings['site_name'] ?? 'ระบบแจ้งซ่อมออนไลน์'; ?> มหาวิทยาลัยราชภัฏเลย</strong> |
+                ใบแจ้งซ่อมเลขที่ <?php echo str_pad($request_id, 5, '0', STR_PAD_LEFT); ?>
+            </div>
+            <div class="footer-right">
+                หน้า <?php echo $page_num; ?> · รูปที่ <?php
+                    $start = (($page_num - 2) * 2) + 1;
+                    $end   = min($start + count($chunk) - 1, count($all_images_flat));
+                    echo $start . '–' . $end . ' จากทั้งหมด ' . count($all_images_flat) . ' รูป';
+                ?>
+            </div>
+        </div>
+    </div>
+    <?php
+            $page_num++;
+        endforeach;
+    endif;
+    ?>
+</body>
 </html>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // ตรวจสอบว่ามีการเชื่อมต่อกับฐานข้อมูลหรือไม่
 if (!isset($conn)) {
     require_once dirname(__FILE__) . '/../config/db_connect.php';

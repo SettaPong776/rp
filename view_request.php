@@ -158,8 +158,44 @@ if (is_staff_role($_SESSION['role']) && isset($_POST['update_status'])) {
     }
 }
 
+// ยกเลิกคำขอซ่อม (สำหรับผู้ใช้ทั่วไปเจ้าของ request)
+if (!is_staff_role($_SESSION['role']) && isset($_POST['cancel_request'])) {
+    $cancel_reason = trim($_POST['cancel_reason'] ?? '');
 
-// ดึงข้อมูลประวัติการอัพเดท
+    if ($request['user_id'] != $_SESSION['user_id']) {
+        $error = 'คุณไม่มีสิทธิ์ยกเลิกคำขอนี้';
+    } elseif ($request['status'] !== 'pending') {
+        $error = 'ไม่สามารถยกเลิกได้ เนื่องจากคำขอนี้อยู่ระหว่างดำเนินการหรือเสร็จสิ้นแล้ว';
+    } elseif (empty($cancel_reason)) {
+        $error = 'กรุณาระบุเหตุผลในการยกเลิกการแจ้งซ่อม';
+    } else {
+        $remark = 'ผู้แจ้งซ่อมขอยกเลิก' . ($cancel_reason ? ': ' . $cancel_reason : '');
+        $cancel_success = db_execute(
+            "UPDATE repair_requests SET status = 'rejected', admin_remark = ? WHERE request_id = ? AND user_id = ?",
+            "sii",
+            [$remark, $request_id, $_SESSION['user_id']]
+        );
+        if ($cancel_success) {
+            insert_request_history($request_id, $_SESSION['user_id'], 'rejected', $remark, '');
+            $success = 'ยกเลิกคำขอซ่อมเรียบร้อยแล้ว';
+            $result = db_select(
+                "SELECT r.*, c.category_name, u.fullname as requester_name, u.email as requester_email,
+                        u.department as requester_department, u.phone as requester_phone
+                 FROM repair_requests r
+                 JOIN categories c ON r.category_id = c.category_id
+                 JOIN users u ON r.user_id = u.user_id
+                 WHERE r.request_id = ?",
+                "i",
+                [$request_id]
+            );
+            $request = mysqli_fetch_assoc($result);
+        } else {
+            $error = 'เกิดข้อผิดพลาดในการยกเลิกคำขอ กรุณาลองใหม่อีกครั้ง';
+        }
+    }
+}
+
+
 $history_result = db_select(
     "SELECT h.*, u.fullname 
      FROM request_history h 
@@ -223,6 +259,12 @@ include 'includes/header.php';
             <a href="print_request.php?id=<?php echo $request_id; ?>" class="btn btn-danger" target="_blank">
                 <i class="bx bxs-file-pdf me-1"></i>รายงาน PDF
             </a>
+            <?php if ($request['status'] === 'pending'): ?>
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
+                    data-bs-target="#cancelRequestModal">
+                    <i class="bx bx-x-circle me-1"></i>ยกเลิกการแจ้งซ่อม
+                </button>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>
@@ -726,6 +768,59 @@ include 'includes/header.php';
             }
         })();
     </script>
+
+    <?php if (!is_staff_role($_SESSION['role']) && $request['user_id'] == $_SESSION['user_id']): ?>
+        <!-- ====== Cancel Request Modal ====== -->
+        <div class="modal fade" id="cancelRequestModal" tabindex="-1" aria-labelledby="cancelRequestModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="cancelRequestModalLabel">
+                            <i class="bx bx-x-circle me-2"></i>ยืนยันการยกเลิก
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+                    <form method="POST" action="view_request.php?id=<?php echo $request_id; ?>">
+                        <div class="modal-body p-4">
+                            <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+                                <i class="bx bx-error fs-5"></i>
+                                <div>การยกเลิกนี้ไม่สามารถย้อนกลับได้ โปรดยืนยันก่อนยกเลิก</div>
+
+                            </div>
+                            <div class="mb-3">
+                                <label for="cancel_reason" class="form-label fw-semibold">
+                                    ระบุเหตุผลการยกเลิก <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control" id="cancel_reason" name="cancel_reason" rows="3"
+                                    maxlength="500" required minlength="5"
+                                    placeholder="เช่น ซ่อมเองได้แล้ว / ไม่ต้องการซ่อมแล้ว / อื่นๆ"></textarea>
+                                <div class="invalid-feedback">กรุณาระบุเหตุผลการยกเลิก (อย่างน้อย 5 ตัวอักษร)</div>
+                            </div>
+                            <div class="p-3 bg-light rounded">
+                                <div class="row g-2 text-sm">
+                                    <div class="col-5 text-muted">หมายเลข</div>
+                                    <div class="col-7 fw-semibold">
+                                        #<?php echo str_pad($request_id, 5, '0', STR_PAD_LEFT); ?></div>
+                                    <div class="col-5 text-muted">เรื่อง</div>
+                                    <div class="col-7"><?php echo htmlspecialchars($request['title']); ?></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bx bx-x me-1"></i>ไม่ยกเลิก
+                            </button>
+                            <button type="submit" name="cancel_request" class="btn btn-danger">
+                                <i class="bx bx-check me-1"></i>ยืนยันยกเลิกการแจ้งซ่อม
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <?php
     // แสดงส่วน footer
