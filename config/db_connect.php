@@ -373,6 +373,113 @@ function send_email_smtp($to, $subject, $body, $host, $port, $username, $passwor
 }
 
 /**
+ * ส่งอีเมลแจ้งผู้แจ้งซ่อมเมื่อสถานะเปลี่ยนแปลง
+ */
+function send_status_update_email($to_email, $to_name, $request_id, $title, $category, $location, $new_status, $status_text, $remark, $updated_by)
+{
+    // สร้าง badge + icon ตามสถานะ
+    $status_config = [
+        'pending' => ['color' => '#ffc107', 'text_color' => '#333', 'icon' => '⏳', 'label' => 'รอดำเนินการ'],
+        'in_progress' => ['color' => '#0dcaf0', 'text_color' => '#fff', 'icon' => '🔧', 'label' => 'กำลังดำเนินการ'],
+        'completed' => ['color' => '#198754', 'text_color' => '#fff', 'icon' => '✅', 'label' => 'เสร็จสิ้น'],
+        'rejected' => ['color' => '#dc3545', 'text_color' => '#fff', 'icon' => '❌', 'label' => 'ยกเลิก'],
+    ];
+    $cfg = $status_config[$new_status] ?? ['color' => '#6c757d', 'text_color' => '#fff', 'icon' => '📋', 'label' => $status_text];
+
+    // สร้าง base URL
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $base_url = $protocol . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . dirname($_SERVER['SCRIPT_NAME'] ?? '/');
+    $view_link = $base_url . '/view_request.php?id=' . $request_id;
+
+    $subject = $cfg['icon'] . ' อัปเดตสถานะแจ้งซ่อม #' . $request_id . ' - ' . $cfg['label'];
+
+    $body = '<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:30px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#4e73df,#224abe);padding:30px 40px;text-align:center;">
+            <div style="font-size:40px;margin-bottom:8px;">' . $cfg['icon'] . '</div>
+            <h1 style="color:#fff;margin:0;font-size:22px;">อัปเดตสถานะแจ้งซ่อม</h1>
+            <p style="color:rgba(255,255,255,0.85);margin:6px 0 0;">ระบบแจ้งซ่อมและบำรุงรักษา</p>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:30px 40px;">
+            <p style="color:#333;font-size:15px;margin:0 0 6px;">เรียน คุณ <strong>' . htmlspecialchars($to_name) . '</strong>,</p>
+            <p style="color:#555;font-size:14px;margin:0 0 24px;line-height:1.7;">
+              รายการแจ้งซ่อมของคุณ <strong>#' . $request_id . '</strong> ได้รับการอัปเดตสถานะใหม่แล้ว
+            </p>
+
+            <!-- Status Badge -->
+            <div style="text-align:center;margin-bottom:24px;">
+              <span style="display:inline-block;background:' . $cfg['color'] . ';color:' . $cfg['text_color'] . ';padding:10px 30px;border-radius:30px;font-size:18px;font-weight:700;">
+                ' . $cfg['icon'] . ' ' . $cfg['label'] . '
+              </span>
+            </div>
+
+            <!-- Request Details -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fc;border-radius:10px;border:1px solid #e3e6f0;overflow:hidden;margin-bottom:20px;">
+              <tr><td style="background:#4e73df;padding:10px 20px;">
+                <span style="color:#fff;font-weight:700;">รายละเอียดคำร้อง #' . $request_id . '</span>
+              </td></tr>
+              <tr><td style="padding:16px 20px;">
+                <table width="100%" cellpadding="6">
+                  <tr>
+                    <td width="35%" style="color:#888;font-size:13px;">📌 หัวข้อ</td>
+                    <td style="color:#333;font-weight:700;">' . htmlspecialchars($title) . '</td>
+                  </tr>
+                  <tr style="background:#f0f2ff;">
+                    <td style="color:#888;font-size:13px;">📂 หมวดหมู่</td>
+                    <td style="color:#333;">' . htmlspecialchars($category) . '</td>
+                  </tr>
+                  ' . (!empty($location) ? '<tr><td style="color:#888;font-size:13px;">📍 สถานที่</td><td style="color:#333;">' . htmlspecialchars($location) . '</td></tr>' : '') . '
+                  <tr style="background:#f0f2ff;">
+                    <td style="color:#888;font-size:13px;">👤 อัปเดตโดย</td>
+                    <td style="color:#333;">' . htmlspecialchars($updated_by) . '</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#888;font-size:13px;">🕐 เวลา</td>
+                    <td style="color:#333;">' . date('d/m/Y H:i') . ' น.</td>
+                  </tr>
+                </table>
+              </td></tr>
+            </table>
+
+            <!-- Remark -->
+            ' . (!empty($remark) ? '
+            <div style="background:#fffbf0;border-left:4px solid #ffc107;border-radius:4px;padding:14px 18px;margin-bottom:20px;">
+              <p style="margin:0 0 4px;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;">หมายเหตุจากเจ้าหน้าที่</p>
+              <p style="margin:0;color:#555;font-size:14px;line-height:1.7;">' . nl2br(htmlspecialchars($remark)) . '</p>
+            </div>' : '') . '
+
+            <!-- CTA -->
+            <div style="text-align:center;margin-top:24px;">
+              <a href="' . $view_link . '" style="display:inline-block;background:linear-gradient(135deg,#4e73df,#224abe);color:#fff;text-decoration:none;padding:13px 32px;border-radius:8px;font-size:14px;font-weight:700;">
+                🔍 ดูรายละเอียดการแจ้งซ่อม
+              </a>
+            </div>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f8f9fa;padding:16px 40px;text-align:center;border-top:1px solid #e9ecef;">
+            <p style="margin:0;color:#aaa;font-size:12px;">อีเมลนี้ส่งโดยอัตโนมัติจากระบบแจ้งซ่อม กรุณาอย่าตอบกลับ</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>';
+
+    return send_email($to_email, $subject, $body);
+}
+
+/**
  * ส่งอีเมล OTP สำหรับรีเซ็ตรหัสผ่าน
  * @param string $to_email อีเมลผู้รับ
  * @param string $to_name ชื่อผู้รับ

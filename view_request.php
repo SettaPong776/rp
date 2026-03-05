@@ -140,6 +140,22 @@ if (is_staff_role($_SESSION['role']) && isset($_POST['update_status'])) {
             "\nอัพเดตโดย: " . $_SESSION['fullname'] .
             "\nเวลา: " . thai_date(date('Y-m-d H:i:s')));
 
+        // ===== ส่งอีเมลแจ้งผู้แจ้งซ่อม =====
+        if (!empty($request['requester_email'])) {
+            send_status_update_email(
+                $request['requester_email'],
+                $request['requester_name'],
+                $request_id,
+                $request['title'],
+                $request['category_name'],
+                $request['location'] ?? '',
+                $new_status,
+                $status_text,
+                $admin_remark,
+                $_SESSION['fullname']
+            );
+        }
+
         $success = 'อัพเดตสถานะรายการแจ้งซ่อมเรียบร้อยแล้ว';
 
         // ดึงข้อมูลรายการแจ้งซ่อมอีกครั้งเพื่ออัพเดตข้อมูลที่แสดง

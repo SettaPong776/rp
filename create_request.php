@@ -117,6 +117,110 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     "\nสถานที่: " . ($location ?: 'ไม่ระบุ') .
                     "\nเวลา: " . thai_date(date('Y-m-d H:i:s')));
 
+                // ===== ส่งอีเมลแจ้งเตือน building_staff ทุกคน =====
+                $staff_result = db_select(
+                    "SELECT fullname, email FROM users WHERE role = 'building_staff' AND email IS NOT NULL AND email != ''",
+                    "",
+                    []
+                );
+
+                if ($staff_result && mysqli_num_rows($staff_result) > 0) {
+                    // สร้างลิงก์ดูรายละเอียด
+                    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                    $base_url = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']);
+                    $view_link = $base_url . '/view_request.php?id=' . $request_id;
+
+                    $priority_badge = match ($priority) {
+                        'urgent' => '<span style="background:#dc3545;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🔴 เร่งด่วน</span>',
+                        'high' => '<span style="background:#fd7e14;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🟠 สูง</span>',
+                        'low' => '<span style="background:#20c997;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🟢 ต่ำ</span>',
+                        default => '<span style="background:#4e73df;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🔵 ปานกลาง</span>',
+                    };
+
+                    $email_subject = "📋 แจ้งซ่อมใหม่ #$request_id - $title";
+                    $email_body = '<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:30px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#4e73df,#224abe);padding:30px 40px;text-align:center;">
+            <h1 style="color:#fff;margin:0;font-size:22px;">🔧 มีรายการแจ้งซ่อมใหม่</h1>
+            <p style="color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:13px;">ระบบแจ้งซ่อมและบำรุงรักษา</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:30px 40px;">
+            <p style="color:#555;margin:0 0 20px;font-size:15px;">มีการแจ้งซ่อมใหม่เข้ามาในระบบ กรุณาตรวจสอบและดำเนินการ</p>
+
+            <!-- Request Info Box -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fc;border-radius:10px;overflow:hidden;margin-bottom:20px;border:1px solid #e3e6f0;">
+              <tr><td style="background:#4e73df;padding:10px 20px;">
+                <span style="color:#fff;font-weight:700;font-size:15px;">รายละเอียดคำร้อง #' . $request_id . '</span>
+              </td></tr>
+              <tr><td style="padding:20px;">
+                <table width="100%" cellpadding="6" cellspacing="0">
+                  <tr>
+                    <td width="35%" style="color:#888;font-size:14px;">📌 หัวข้อ</td>
+                    <td style="color:#333;font-weight:700;font-size:15px;">' . htmlspecialchars($title) . '</td>
+                  </tr>
+                  <tr style="background:#f8f9fe;">
+                    <td style="color:#888;font-size:14px;">📂 หมวดหมู่</td>
+                    <td style="color:#333;font-size:14px;">' . htmlspecialchars($category['category_name']) . '</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#888;font-size:14px;">📍 สถานที่</td>
+                    <td style="color:#333;font-size:14px;">' . htmlspecialchars($location ?: 'ไม่ระบุ') . '</td>
+                  </tr>
+                  ' . (!empty($asset_number) ? '<tr style="background:#f8f9fe;"><td style="color:#888;font-size:14px;">🏷️ ครุภัณฑ์</td><td style="color:#333;font-size:14px;">' . htmlspecialchars($asset_number) . '</td></tr>' : '') . '
+                  <tr>
+                    <td style="color:#888;font-size:14px;">⚡ ความสำคัญ</td>
+                    <td>' . $priority_badge . '</td>
+                  </tr>
+                  <tr style="background:#f8f9fe;">
+                    <td style="color:#888;font-size:14px;">👤 ผู้แจ้ง</td>
+                    <td style="color:#333;font-size:14px;">' . htmlspecialchars($user['fullname']) . '</td>
+                  </tr>
+                  <tr>
+                    <td style="color:#888;font-size:14px;">🕐 เวลา</td>
+                    <td style="color:#333;font-size:14px;">' . thai_date(date('Y-m-d H:i:s')) . '</td>
+                  </tr>
+                </table>
+              </td></tr>
+            </table>
+
+            <!-- Description -->
+            <div style="background:#fffbf0;border-left:4px solid #ffc107;border-radius:4px;padding:14px 18px;margin-bottom:24px;">
+              <p style="margin:0 0 4px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;">รายละเอียดปัญหา</p>
+              <p style="margin:0;color:#555;font-size:14px;line-height:1.7;">' . nl2br(htmlspecialchars($description)) . '</p>
+            </div>
+
+            <!-- CTA Button -->
+            <div style="text-align:center;">
+              <a href="' . $view_link . '" style="display:inline-block;background:linear-gradient(135deg,#4e73df,#224abe);color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:15px;font-weight:700;">
+                🔍 ดูรายละเอียดและดำเนินการ
+              </a>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f8f9fa;padding:16px 40px;text-align:center;border-top:1px solid #e9ecef;">
+            <p style="margin:0;color:#aaa;font-size:12px;">อีเมลนี้ส่งโดยอัตโนมัติจากระบบแจ้งซ่อม กรุณาอย่าตอบกลับ</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>';
+
+                    while ($staff = mysqli_fetch_assoc($staff_result)) {
+                        if (!empty($staff['email'])) {
+                            send_email($staff['email'], $email_subject, $email_body);
+                        }
+                    }
+                }
+
                 // Redirect ไปยังหน้าดูรายละเอียด
                 header('Location: view_request.php?id=' . $request_id . '&success=1');
                 exit();
