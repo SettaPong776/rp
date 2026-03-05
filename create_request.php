@@ -469,3 +469,24 @@ include 'includes/header.php';
 // แสดงส่วน footer
 include 'includes/footer.php';
 ?>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.querySelector('form').addEventListener('submit', function (e) {
+        // Validate ก่อน (re-check)
+        const imgInput = document.getElementById('images');
+        if (!imgInput || !imgInput.files || imgInput.files.length === 0) return; // ให้ native validate จัดการ
+
+        // แสดง loading
+        Swal.fire({
+            title: 'กำลังบันทึกข้อมูล...',
+            html: '<p class="mb-1">กำลังอัพโหลดรูปและบันทึกรายการ</p>' +
+                  '<p class="text-muted small mb-0">โปรดรอสักครู่ อย่าปิดหน้าต่างงาน</p>',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: function () { Swal.showLoading(); }
+    });
+});
+</script>

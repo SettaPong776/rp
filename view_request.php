@@ -842,3 +842,44 @@ include 'includes/header.php';
     // แสดงส่วน footer
     include 'includes/footer.php';
     ?>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ===== Loading เมื่อ submit อัปเดตสถานะ =====
+    const updateForm = document.querySelector('#updateStatusModal form');
+    if (updateForm) {
+        updateForm.addEventListener('submit', function () {
+            const statusEl  = document.getElementById('new_status');
+            const statusTxt = statusEl ? statusEl.options[statusEl.selectedIndex].text : '';
+            Swal.fire({
+                title: 'กำลังอัปเดตสถานะ...',
+                html: '<p class="mb-1">สถานะใหม่: <strong>' + statusTxt + '</strong></p>' +
+                      '<p class="text-muted small mb-0">โปรดรอสักครู่</p>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: function () { Swal.showLoading(); }
+            });
+        });
+    }
+
+    // ===== Loading เมื่อ submit ยกเลิกคำขอ =====
+    const cancelForm = document.querySelector('#cancelRequestModal form');
+    if (cancelForm) {
+        cancelForm.addEventListener('submit', function () {
+            Swal.fire({
+                title: 'กำลังยกเลิกคำขอ...',
+                html: '<p class="text-muted small mb-0">โปรดรอสักครู่</p>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: function () { Swal.showLoading(); }
+            });
+        });
+    }
+
+});
+</script>

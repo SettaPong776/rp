@@ -191,7 +191,79 @@ if (isset($_POST['test_email'])) {
     }
 }
 
-// ดึงการตั้งค่าปัจจุบัน
+// ========== ส่งประกาศผ่านอีเมล ==========
+$broadcast_success = '';
+$broadcast_error = '';
+if (isset($_POST['send_broadcast'])) {
+    $bc_subject = trim($_POST['bc_subject'] ?? '');
+    $bc_body_raw = trim($_POST['bc_body'] ?? '');
+    $bc_target = $_POST['bc_target'] ?? 'all';   // all | building_staff | user
+
+    if (empty($bc_subject) || empty($bc_body_raw)) {
+        $broadcast_error = 'กรุณากรอกหัวข้อและเนื้อหาประกาศให้ครบถ้วน';
+    } else {
+        // ดึงอีเมล user ตาม target
+        if ($bc_target === 'all') {
+            $bc_query = "SELECT fullname, email FROM users WHERE email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'building_staff') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role = 'building_staff' AND email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'admin') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role = 'admin' AND email IS NOT NULL AND email != ''";
+        } else {
+            $bc_query = "SELECT fullname, email FROM users WHERE role = 'user' AND email IS NOT NULL AND email != ''";
+        }
+
+        $bc_result = mysqli_query($conn, $bc_query);
+        $sent_count = 0;
+        $fail_count = 0;
+
+        // template อีเมล
+        $site_name_bc = $settings['site_name'] ?? 'ระบบแจ้งซ่อม';
+
+        while ($bc_user = mysqli_fetch_assoc($bc_result)) {
+            $bc_html = '<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:30px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#4e73df,#224abe);padding:28px 40px;text-align:center;">
+            <div style="font-size:36px;margin-bottom:8px;">📢</div>
+            <h1 style="color:#fff;margin:0;font-size:20px;">ประกาศจากระบบ</h1>
+            <p style="color:rgba(255,255,255,0.85);margin:5px 0 0;font-size:13px;">' . htmlspecialchars($site_name_bc) . '</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:30px 40px;">
+            <p style="color:#333;margin:0 0 6px;">เรียน คุณ <strong>' . htmlspecialchars($bc_user['fullname']) . '</strong>,</p>
+            <div style="border-top:2px solid #e9ecef;margin:18px 0;"></div>
+            <div style="color:#444;font-size:15px;line-height:1.8;">' . nl2br(htmlspecialchars($bc_body_raw)) . '</div>
+            <div style="border-top:2px solid #e9ecef;margin:24px 0;"></div>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f8f9fa;padding:16px 40px;text-align:center;border-top:1px solid #e9ecef;">
+            <p style="margin:0;color:#aaa;font-size:12px;">อีเมลนี้ส่งโดยอัตโนมัติจาก ' . htmlspecialchars($site_name_bc) . ' กรุณาอย่าตอบกลับ</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>';
+
+            $ok = send_email($bc_user['email'], $bc_subject, $bc_html);
+            $ok ? $sent_count++ : $fail_count++;
+        }
+
+        if ($sent_count > 0) {
+            $broadcast_success = "ส่งประกาศสำเร็จ {$sent_count} คน" . ($fail_count > 0 ? " (ล้มเหลว {$fail_count} คน)" : '');
+        } else {
+            $broadcast_error = 'ไม่มีผู้รับที่มีอีเมลในระบบ หรือส่งทั้งหมดไม่สำเร็จ';
+        }
+    }
+}
+// ========== ดึงการตั้งค่าปัจจุบัน ==========
 $query = "SELECT * FROM settings";
 $result = mysqli_query($conn, $query);
 $settings = [];
@@ -287,6 +359,12 @@ include 'includes/header.php';
                     aria-selected="<?php echo ($active_tab === 'departments') ? 'true' : 'false'; ?>">
                     <i class="bx bx-building me-1"></i>จัดการแผนก/ฝ่าย
                     <span class="badge bg-primary ms-1"><?php echo count($departments_list); ?></span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link <?php echo ($active_tab === 'broadcast') ? 'active' : ''; ?>" id="broadcast-tab"
+                    data-bs-toggle="tab" data-bs-target="#broadcast" type="button" role="tab">
+                    <i class="bx bx-broadcast me-1"></i>ประกาศผ่านอีเมล
                 </button>
             </li>
         </ul>
@@ -580,6 +658,135 @@ include 'includes/header.php';
 
             </div><!-- end tab departments -->
 
+            <!-- ===== Tab: ประกาศผ่านอีเมล ===== -->
+            <div class="tab-pane fade <?php echo ($active_tab === 'broadcast') ? 'show active' : ''; ?>" id="broadcast"
+                role="tabpanel">
+
+                <?php if (!empty($broadcast_success)): ?>
+                    <div class="alert alert-success alert-dismissible fade show">
+                        <i class="bx bx-check-circle me-1"></i>
+                        <?php echo $broadcast_success; ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+                <?php if (!empty($broadcast_error)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        <i class="bx bx-error-circle me-1"></i>
+                        <?php echo $broadcast_error; ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">ส่งถึง <span class="text-danger">*</span></label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_all"
+                                            value="all" checked>
+                                        <label class="form-check-label" for="bc_all">
+                                            <i class="bx bx-group me-1"></i>ทุกคน
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_user"
+                                            value="user">
+                                        <label class="form-check-label" for="bc_user">
+                                            <i class="bx bx-user me-1"></i> ผู้ใช้งานทั่วไป
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_staff"
+                                            value="building_staff">
+                                        <label class="form-check-label" for="bc_staff">
+                                            <i class="bx bx-hard-hat me-1"></i>งานอาคาร
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_admin"
+                                            value="admin">
+                                        <label class="form-check-label" for="bc_admin">
+                                            <i class="bx bx-shield-alt-2 me-1"></i>ผู้ดูแลระบบ
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="bc_subject" class="form-label fw-semibold">หัวข้ออีเมล <span
+                                        class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bx bx-heading"></i></span>
+                                    <input type="text" class="form-control" id="bc_subject" name="bc_subject"
+                                        placeholder="เช่น ประกาศการปิดสำนักงานวันที่ 5 มีนาคม 2568" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="bc_body" class="form-label fw-semibold">เนื้อหาประกาศ <span
+                                        class="text-danger">*</span></label>
+                                <textarea class="form-control" id="bc_body" name="bc_body" rows="8"
+                                    placeholder="พิมพ์เนื้อหาที่ต้องการประกาศที่นี่..." required></textarea>
+                                <div class="form-text">รับการเว้นบรรทัด (Enter) เพื่อขึ้นบรรทัดใหม่</div>
+                            </div>
+
+                            <button type="button" id="btn-send-broadcast" class="btn btn-primary">
+                                <i class="bx bx-send me-1"></i>ส่งประกาศ
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="fw-bold mb-3"><i class="bx bx-info-circle me-1 text-primary"></i>ข้อมูลผู้รับ
+                                </h6>
+                                <?php
+                                $cnt_all = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_user = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='user' AND email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_staff = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='building_staff' AND email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_admin = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='admin' AND email IS NOT NULL AND email != ''"))['c'];
+                                ?>
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2">
+                                        <span class="badge bg-primary me-2">
+                                            <?php echo $cnt_all; ?>
+                                        </span>
+                                        <strong>ทุกคน</strong> (มีอีเมล)
+                                    </li>
+                                    <li class="mb-2">
+                                        <span class="badge bg-secondary me-2">
+                                            <?php echo $cnt_user; ?>
+                                        </span>
+                                        ผู้ใช้งานทั่วไป
+                                    </li>
+                                    <li class="mb-2">
+                                        <span class="badge bg-info text-dark me-2">
+                                            <?php echo $cnt_staff; ?>
+                                        </span>
+                                        งานอาคาร
+                                    </li>
+                                    <li>
+                                        <span class="badge bg-danger me-2">
+                                            <?php echo $cnt_admin; ?>
+                                        </span>
+                                        ผู้ดูแลระบบ
+                                    </li>
+                                </ul>
+                                <hr>
+                                <div class="alert alert-warning py-2 mb-0 small">
+                                    <i class="bx bx-error-circle me-1"></i>
+                                    ผู้ใช้ที่ไม่มีอีเมลในระบบจะไม่ได้รับประกาศ
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- end tab broadcast -->
+
         </div><!-- end tab-content -->
 
         <!-- ปุ่มบันทึก (แสดงเฉพาะ tab ทั่วไป) -->
@@ -600,7 +807,7 @@ include 'includes/header.php';
 
         tabBtns.forEach(function (btn) {
             btn.addEventListener('shown.bs.tab', function (e) {
-                if (e.target.id === 'departments-tab' || e.target.id === 'smtp-tab') {
+                if (e.target.id === 'departments-tab' || e.target.id === 'smtp-tab' || e.target.id === 'broadcast-tab') {
                     saveBtnArea.style.display = 'none';
                 } else {
                     saveBtnArea.style.display = 'flex';
@@ -608,9 +815,9 @@ include 'includes/header.php';
             });
         });
 
-        // ซ่อนปุ่มบันทึกถ้า active tab คือ departments หรือ smtp
+        // ซ่อนปุ่มบันทึกถ้า active tab คือ departments หรือ smtp หรือ broadcast
         const activePill = document.querySelector('#settingsTabs .nav-link.active');
-        if (activePill && (activePill.id === 'departments-tab' || activePill.id === 'smtp-tab')) {
+        if (activePill && (activePill.id === 'departments-tab' || activePill.id === 'smtp-tab' || activePill.id === 'broadcast-tab')) {
             saveBtnArea.style.display = 'none';
         }
 
@@ -724,3 +931,64 @@ include 'includes/header.php';
 // แสดงส่วน footer
 include 'includes/footer.php';
 ?>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btnSend = document.getElementById('btn-send-broadcast');
+    if (!btnSend) return;
+
+    btnSend.addEventListener('click', function () {
+        const subject = document.getElementById('bc_subject')?.value.trim();
+        const body    = document.getElementById('bc_body')?.value.trim();
+        const target  = document.querySelector('input[name="bc_target"]:checked');
+        const targetLabel = target ? target.closest('.form-check').querySelector('label').textContent.trim() : '';
+
+        if (!subject || !body) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'กรอกข้อมูลให้ครบถ้วน',
+                text: 'กรุณากรอกหัวข้ออีเมลและเนื้อหาประกาศก่อนส่ง',
+                confirmButtonColor: '#4e73df'
+            });
+            return;
+        }
+
+        Swal.fire({
+            icon: 'question',
+            title: 'ยืนยันการส่งประกาศ',
+            html:
+                '<div class="text-start">' +
+                '<p class="mb-1">📤 <strong>ส่งถึง:</strong> ' + targetLabel + '</p>' +
+                '<p class="mb-0">📧 <strong>หัวข้อ:</strong> ' + subject + '</p>' +
+                '</div>',
+            showCancelButton: true,
+            confirmButtonText: '✔️ ส่งเลย',
+            cancelButtonText: '❌ ยกเลิก',
+            confirmButtonColor: '#4e73df',
+            cancelButtonColor: '#6c757d',
+            reverseButtons: true
+        }).then(function (result) {
+            if (result.isConfirmed) {
+                // เพิ่ม hidden input name="send_broadcast" แล้ว submit
+                const form = btnSend.closest('form');
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'send_broadcast';
+                hidden.value = '1';
+                form.appendChild(hidden);
+
+                // แสดง loading
+                Swal.fire({
+                    title: 'กำลังส่ง...',
+                    text: 'โปรดรอสักครู่',
+                    allowOutsideClick: false,
+                    didOpen: function () { Swal.showLoading(); }
+                });
+                form.submit();
+            }
+        });
+    });
+});
+</script>
