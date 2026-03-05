@@ -235,6 +235,9 @@ include 'includes/header.php';
                                     </span>
                                     <input type="password" class="form-control" id="password" name="password"
                                         placeholder="กรอกรหัสผ่าน" required>
+                                    <button type="button" class="btn btn-outline-secondary toggle-pass" data-target="password" tabindex="-1">
+                                        <i class="bx bx-show"></i>
+                                    </button>
                                 </div>
                                 <small class="text-muted">รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร</small>
                             </div>
@@ -247,6 +250,9 @@ include 'includes/header.php';
                                     </span>
                                     <input type="password" class="form-control" id="confirm_password"
                                         name="confirm_password" placeholder="กรอกรหัสผ่านอีกครั้ง" required>
+                                    <button type="button" class="btn btn-outline-secondary toggle-pass" data-target="confirm_password" tabindex="-1">
+                                        <i class="bx bx-show"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -342,6 +348,18 @@ include 'includes/footer.php';
                 if (tsControl) tsControl.style.border = '';
                 if (deptError) deptError.style.display = 'none';
             }
+        });
+
+        // ===== Toggle show/hide password =====
+        document.querySelectorAll('.toggle-pass').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const inp  = document.getElementById(this.dataset.target);
+                const icon = this.querySelector('i');
+                const show = inp.type === 'password';
+                inp.type   = show ? 'text' : 'password';
+                icon.className = show ? 'bx bx-hide' : 'bx bx-show';
+                inp.focus();
+            });
         });
     });
 </script>

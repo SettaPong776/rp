@@ -117,6 +117,10 @@ include 'includes/header.php';
                             </span>
                             <input type="password" class="form-control" id="password" name="password"
                                 placeholder="กรอกรหัสผ่าน" required>
+                            <button type="button" class="btn btn-outline-secondary" id="toggle-password"
+                                title="แสดง/ซ่อนรหัสผ่าน" tabindex="-1">
+                                <i class="bx bx-show" id="toggle-icon"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -152,3 +156,14 @@ include 'includes/header.php';
 // แสดงส่วน footer
 include 'includes/footer.php';
 ?>
+
+<script>
+document.getElementById('toggle-password').addEventListener('click', function () {
+    const inp  = document.getElementById('password');
+    const icon = document.getElementById('toggle-icon');
+    const show = inp.type === 'password';
+    inp.type   = show ? 'text' : 'password';
+    icon.className = show ? 'bx bx-hide' : 'bx bx-show';
+    inp.focus();
+});
+</script>
