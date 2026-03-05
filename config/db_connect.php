@@ -253,3 +253,178 @@ function get_role_label($role)
     ];
     return $labels[$role] ?? 'ผู้ใช้งาน';
 }
+
+/**
+ * ส่งอีเมลผ่าน PHP mail() หรือ SMTP
+ * @param string $to อีเมลผู้รับ
+ * @param string $subject หัวเรื่อง
+ * @param string $body เนื้อหา HTML
+ * @return bool
+ */
+function send_email($to, $subject, $body)
+{
+    global $conn;
+
+    // ดึงการตั้งค่า SMTP จากฐานข้อมูล (ถ้ามี)
+    $smtp_host = '';
+    $smtp_user = '';
+    $smtp_pass = '';
+    $smtp_port = 587;
+    $mail_from = '';
+    $mail_from_name = 'ระบบแจ้งซ่อม';
+
+    $result = mysqli_query($conn, "SELECT setting_name, setting_value FROM settings WHERE setting_name IN ('smtp_host','smtp_user','smtp_pass','smtp_port','smtp_from','site_name')");
+    if ($result) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            switch ($row['setting_name']) {
+                case 'smtp_host':
+                    $smtp_host = $row['setting_value'];
+                    break;
+                case 'smtp_user':
+                    $smtp_user = $row['setting_value'];
+                    break;
+                case 'smtp_pass':
+                    $smtp_pass = $row['setting_value'];
+                    break;
+                case 'smtp_port':
+                    $smtp_port = (int) $row['setting_value'];
+                    break;
+                case 'smtp_from':
+                    $mail_from = $row['setting_value'];
+                    break;
+                case 'site_name':
+                    $mail_from_name = $row['setting_value'];
+                    break;
+            }
+        }
+    }
+
+    if (empty($mail_from))
+        $mail_from = $smtp_user;
+
+    // ถ้ามีการตั้งค่า SMTP ให้ใช้ PHPMailer
+    if (!empty($smtp_host) && !empty($smtp_user) && !empty($smtp_pass)) {
+        return send_email_smtp($to, $subject, $body, $smtp_host, $smtp_port, $smtp_user, $smtp_pass, $mail_from, $mail_from_name);
+    }
+
+    // Fallback: ใช้ PHP mail()
+    $headers = "MIME-Version: 1.0\r\n";
+    $headers .= "Content-type: text/html; charset=UTF-8\r\n";
+    $headers .= "From: {$mail_from_name} <noreply@repair.local>\r\n";
+    return mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, $headers);
+}
+
+/**
+ * ส่งอีเมลผ่าน PHPMailer (รองรับ SSL/TLS/STARTTLS)
+ */
+function send_email_smtp($to, $subject, $body, $host, $port, $username, $password, $from, $from_name)
+{
+    $phpmailer_path = __DIR__ . '/../libs/phpmailer/';
+    if (!file_exists($phpmailer_path . 'PHPMailer.php')) {
+        error_log('PHPMailer not found at: ' . $phpmailer_path);
+        return false;
+    }
+
+    require_once $phpmailer_path . 'Exception.php';
+    require_once $phpmailer_path . 'PHPMailer.php';
+    require_once $phpmailer_path . 'SMTP.php';
+
+    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+
+    try {
+        $mail->isSMTP();
+        $mail->Host = $host;
+        $mail->SMTPAuth = true;
+        $mail->Username = $username;
+        $mail->Password = $password;
+        $mail->Port = $port;
+
+        // กำหนด encryption ตาม port
+        if ($port == 465) {
+            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;   // SSL
+        } else {
+            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS; // TLS
+        }
+
+        // รองรับ self-signed cert (institutional mail)
+        $mail->SMTPOptions = [
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true,
+            ]
+        ];
+
+        $mail->CharSet = 'UTF-8';
+        $mail->Encoding = 'base64';
+        $mail->setFrom($from, $from_name);
+        $mail->addAddress($to);
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body = $body;
+        $mail->AltBody = strip_tags($body);
+
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log('PHPMailer Error: ' . $mail->ErrorInfo);
+        return false;
+    }
+}
+
+/**
+ * ส่งอีเมล OTP สำหรับรีเซ็ตรหัสผ่าน
+ * @param string $to_email อีเมลผู้รับ
+ * @param string $to_name ชื่อผู้รับ
+ * @param string $otp รหัส OTP 6 หลัก
+ * @return bool
+ */
+function send_password_reset_email($to_email, $to_name, $otp)
+{
+    $subject = 'รหัสยืนยันการรีเซ็ตรหัสผ่าน - ระบบแจ้งซ่อม';
+    $body = '<!DOCTYPE html>
+<html lang="th">
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:40px 0;">
+    <tr><td align="center">
+      <table width="580" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#4e73df,#224abe);padding:35px 40px;text-align:center;">
+            <h1 style="color:#fff;margin:0;font-size:24px;letter-spacing:1px;">🔐 รีเซ็ตรหัสผ่าน</h1>
+            <p style="color:rgba(255,255,255,0.85);margin:8px 0 0;font-size:14px;">ระบบแจ้งซ่อมและบำรุงรักษา</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:40px 40px 30px;">
+            <p style="color:#333;font-size:16px;margin:0 0 16px;">เรียน คุณ ' . htmlspecialchars($to_name) . ',</p>
+            <p style="color:#555;font-size:15px;line-height:1.7;margin:0 0 28px;">
+              เราได้รับคำขอรีเซ็ตรหัสผ่านของคุณ กรุณาใช้รหัส OTP ด้านล่างเพื่อยืนยันตัวตน<br>
+              รหัสนี้จะหมดอายุภายใน <strong>10 นาที</strong>
+            </p>
+            <div style="text-align:center;margin:30px 0;">
+              <div style="display:inline-block;background:linear-gradient(135deg,#f8f9ff,#eef0fb);border:2px dashed #4e73df;border-radius:16px;padding:24px 50px;">
+                <p style="margin:0 0 6px;color:#888;font-size:13px;letter-spacing:2px;text-transform:uppercase;">รหัส OTP ของคุณ</p>
+                <span style="font-size:48px;font-weight:900;color:#4e73df;letter-spacing:12px;">' . $otp . '</span>
+              </div>
+            </div>
+            <div style="background:#fff8e1;border-left:4px solid #ffc107;border-radius:4px;padding:14px 18px;margin:24px 0;">
+              <p style="margin:0;color:#856404;font-size:14px;">
+                ⚠️ หากคุณไม่ได้ร้องขอการรีเซ็ตรหัสผ่าน กรุณาเพิกเฉยต่ออีเมลนี้
+              </p>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f8f9fa;padding:20px 40px;text-align:center;border-top:1px solid #e9ecef;">
+            <p style="margin:0;color:#aaa;font-size:12px;">อีเมลนี้ส่งโดยอัตโนมัติจากระบบแจ้งซ่อม กรุณาอย่าตอบกลับ</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>';
+
+    return send_email($to_email, $subject, $body);
+}

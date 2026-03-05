@@ -121,7 +121,7 @@ if (isset($_POST['test_telegram'])) {
     $url = "https://api.telegram.org/bot" . $telegram_bot_token . "/sendMessage";
     $data = [
         'chat_id' => $telegram_chat_id,
-        'text' => "ทดสอบการเชื่อมต่อกับระบบแจ้งซ่อมออนไลน์\n\nหากคุณได้รับข้อความนี้ แสดงว่าการตั้งค่าสำเร็จแล้ว\n\nเวลา: " . thai_date(date('Y-m-d H:i:s')),
+        'text' => "ทดสอบการเชื่อมต่อกับระบบแจ้ซ่อมออนไลน์\n\nหากคุณได้รับข้อความนี้ แสดงว่าการตั้งค่าสำเร็จแล้ว\n\nเวลา: " . thai_date(date('Y-m-d H:i:s')),
         'parse_mode' => 'HTML'
     ];
 
@@ -142,6 +142,52 @@ if (isset($_POST['test_telegram'])) {
         }
     } else {
         $test_error = 'เกิดข้อผิดพลาดในการเชื่อมต่อกับ Telegram API (HTTP Code: ' . $http_code . ')';
+    }
+}
+
+// ========== จัดการ SMTP Settings ==========
+if (isset($_POST['update_smtp'])) {
+    $smtp_fields = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from'];
+    $smtp_ok = true;
+    foreach ($smtp_fields as $field) {
+        $val = trim($_POST[$field] ?? '');
+        // UPSERT
+        $exists = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM settings WHERE setting_name = '$field'"));
+        if ($exists['c'] > 0) {
+            $q = db_execute("UPDATE settings SET setting_value = ? WHERE setting_name = ?", "ss", [$val, $field]);
+        } else {
+            $q = db_insert("INSERT INTO settings (setting_name, setting_value) VALUES (?, ?)", "ss", [$field, $val]);
+        }
+        if (!$q)
+            $smtp_ok = false;
+    }
+    if ($smtp_ok) {
+        $smtp_success = 'บันทึกการตั้งค่า SMTP เรียบร้อยแล้ว';
+        // reload settings
+        $result2 = mysqli_query($conn, "SELECT * FROM settings");
+        while ($row = mysqli_fetch_assoc($result2))
+            $settings[$row['setting_name']] = $row['setting_value'];
+    } else {
+        $smtp_error = 'เกิดข้อผิดพลาดในการบันทึก';
+    }
+}
+
+// ========== ทดสอบส่งอีเมล ==========
+if (isset($_POST['test_email'])) {
+    $test_to = trim($_POST['test_email_to'] ?? '');
+    if (empty($test_to) || !filter_var($test_to, FILTER_VALIDATE_EMAIL)) {
+        $smtp_error = 'กรุณากรอกอีเมลผู้รับให้ถูกต้อง';
+    } else {
+        $sent = send_email(
+            $test_to,
+            'ทดสอบอีเมล - ระบบแจ้ซ่อม',
+            '<h2>ทดสอบอีเมล</h2><p>หากคุณได้รับอีเมลนี้ แสดงว่าการตั้งค่า SMTP ใช้งานได้อย่างถูกต้อง เวลา: ' . date('d/m/Y H:i:s') . '</p>'
+        );
+        if ($sent) {
+            $smtp_success = 'ส่งอีเมลทดสอบไปยัง ' . htmlspecialchars($test_to) . ' สำเร็จ! กรุณาตรวจสอบอีเมลของคุณ';
+        } else {
+            $smtp_error = 'ไม่สามารถส่งอีเมลได้ กรุณาตรวจสอบการตั้งค่า SMTP อีกครั้ง';
+        }
     }
 }
 
@@ -229,6 +275,12 @@ include 'includes/header.php';
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link <?php echo ($active_tab === 'smtp') ? 'active' : ''; ?>" id="smtp-tab"
+                    data-bs-toggle="tab" data-bs-target="#smtp" type="button" role="tab">
+                    <i class="bx bx-envelope me-1"></i>SMTP / อีเมล
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link <?php echo ($active_tab === 'departments') ? 'active' : ''; ?>"
                     id="departments-tab" data-bs-toggle="tab" data-bs-target="#departments" type="button" role="tab"
                     aria-controls="departments"
@@ -276,6 +328,148 @@ include 'includes/header.php';
                 </form>
             </div>
 
+            <!-- ===== Tab: SMTP ===== -->
+            <div class="tab-pane fade <?php echo ($active_tab === 'smtp') ? 'show active' : ''; ?>" id="smtp"
+                role="tabpanel" aria-labelledby="smtp-tab">
+
+                <?php if (!empty($smtp_success)): ?>
+                    <div class="alert alert-success alert-dismissible fade show">
+                        <i class="bx bx-check-circle me-1"></i><?php echo $smtp_success; ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+                <?php if (!empty($smtp_error)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        <i class="bx bx-error-circle me-1"></i><?php echo $smtp_error; ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+                <div class="row">
+                    <!-- ฟอร์ม SMTP -->
+                    <div class="col-lg-7 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="bx bx-server me-1"></i>ตั้งค่า SMTP Server</h6>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="?tab=smtp">
+                                    <div class="row g-3">
+                                        <div class="col-md-8">
+                                            <label class="form-label fw-semibold">SMTP Host</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light"><i
+                                                        class="bx bx-server"></i></span>
+                                                <input type="text" class="form-control" name="smtp_host"
+                                                    value="<?php echo htmlspecialchars($settings['smtp_host'] ?? ''); ?>"
+                                                    placeholder="smtp.gmail.com">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold">Port</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light"><i
+                                                        class="bx bx-hash"></i></span>
+                                                <input type="number" class="form-control" name="smtp_port"
+                                                    value="<?php echo htmlspecialchars($settings['smtp_port'] ?? '587'); ?>"
+                                                    placeholder="587">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">อีเมล (Username)</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light"><i
+                                                        class="bx bx-envelope"></i></span>
+                                                <input type="email" class="form-control" name="smtp_user"
+                                                    value="<?php echo htmlspecialchars($settings['smtp_user'] ?? ''); ?>"
+                                                    placeholder="your@gmail.com">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">รหัสผ่าน (App Password)</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light"><i
+                                                        class="bx bx-lock-alt"></i></span>
+                                                <input type="password" class="form-control" name="smtp_pass"
+                                                    id="smtp_pass"
+                                                    value="<?php echo htmlspecialchars($settings['smtp_pass'] ?? ''); ?>"
+                                                    placeholder="xxxx xxxx xxxx xxxx">
+                                                <button class="btn btn-outline-secondary" type="button"
+                                                    onclick="toggleSmtpPass()">
+                                                    <i class="bx bx-show" id="smtp_pass_eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label fw-semibold">อีเมลผู้ส่ง (From Email)</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light"><i class="bx bx-at"></i></span>
+                                                <input type="email" class="form-control" name="smtp_from"
+                                                    value="<?php echo htmlspecialchars($settings['smtp_from'] ?? ''); ?>"
+                                                    placeholder="ปกติใช้อีเมลเดียวกับ Username">
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <button type="submit" name="update_smtp" class="btn btn-primary">
+                                                <i class="bx bx-save me-1"></i>บันทึกการตั้งค่า SMTP
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ทดสอบส่งอีเมล + คำแนะนำ -->
+                    <div class="col-lg-5 mb-4">
+                        <div class="card border-0 shadow-sm mb-3">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="bx bx-send me-1"></i>ทดสอบส่งอีเมล</h6>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" action="?tab=smtp">
+                                    <div class="mb-3">
+                                        <label class="form-label">ส่งอีเมลทดสอบไปยัง</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i
+                                                    class="bx bx-envelope"></i></span>
+                                            <input type="email" class="form-control" name="test_email_to"
+                                                placeholder="test@email.com" required>
+                                        </div>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="submit" name="test_email" class="btn btn-success">
+                                            <i class="bx bx-paper-plane me-1"></i>ส่งอีเมลทดสอบ
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning">
+                                <h6 class="mb-0"><i class="bx bx-info-circle me-1"></i>คำแนะนำ Gmail</h6>
+                            </div>
+                            <div class="card-body small">
+                                <ol class="mb-0 ps-3">
+                                    <li class="mb-1">SMTP Host: <code>smtp.gmail.com</code></li>
+                                    <li class="mb-1">Port: <code>465</code> (SSL) หรือ <code>587</code> (TLS)</li>
+                                    <li class="mb-1">เปิดใช้ <strong>2-Step Verification</strong> บน Google Account</li>
+                                    <li class="mb-1">ไปที่ <strong>Security → App passwords</strong></li>
+                                    <li>สร้าง App Password แล้วใส่ในช่องรหัสผ่าน</li>
+                                </ol>
+                                <div class="mt-2">
+                                    <a href="https://myaccount.google.com/apppasswords" target="_blank"
+                                        class="btn btn-sm btn-outline-warning w-100">
+                                        <i class="bx bx-link-external me-1"></i>ไป Google App Passwords
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- end tab smtp -->
+
             <!-- ===== Tab: จัดการแผนก/ฝ่าย ===== -->
             <div class="tab-pane fade <?php echo ($active_tab === 'departments') ? 'show active' : ''; ?>"
                 id="departments" role="tabpanel" aria-labelledby="departments-tab">
@@ -320,7 +514,8 @@ include 'includes/header.php';
                                     <i class="bx bx-list-ul me-1 text-primary"></i>รายการแผนก/ฝ่ายทั้งหมด
                                 </h6>
                                 <div class="d-flex align-items-center gap-2">
-                                    <span class="badge bg-secondary"><?php echo count($departments_list); ?> รายการ</span>
+                                    <span class="badge bg-secondary"><?php echo count($departments_list); ?>
+                                        รายการ</span>
                                     <div class="btn-group btn-group-sm" role="group" aria-label="Sort">
                                         <button type="button" id="sort-asc" class="btn btn-outline-primary active"
                                             title="เรียง ก → ๙" onclick="sortDeptTable('asc')">
@@ -345,7 +540,8 @@ include 'includes/header.php';
                                             <thead class="table-light sticky-top">
                                                 <tr>
                                                     <th width="40">#</th>
-                                                    <th id="dept-name-header" style="cursor:pointer;" onclick="sortDeptTable(window._deptSortDir==='asc'?'desc':'asc')">
+                                                    <th id="dept-name-header" style="cursor:pointer;"
+                                                        onclick="sortDeptTable(window._deptSortDir==='asc'?'desc':'asc')">
                                                         ชื่อแผนก/ฝ่าย
                                                         <i class="bx bx-chevron-up ms-1" id="sort-icon"></i>
                                                     </th>
@@ -404,7 +600,7 @@ include 'includes/header.php';
 
         tabBtns.forEach(function (btn) {
             btn.addEventListener('shown.bs.tab', function (e) {
-                if (e.target.id === 'departments-tab') {
+                if (e.target.id === 'departments-tab' || e.target.id === 'smtp-tab') {
                     saveBtnArea.style.display = 'none';
                 } else {
                     saveBtnArea.style.display = 'flex';
@@ -412,9 +608,9 @@ include 'includes/header.php';
             });
         });
 
-        // ซ่อนปุ่มบันทึกถ้า active tab คือ departments
+        // ซ่อนปุ่มบันทึกถ้า active tab คือ departments หรือ smtp
         const activePill = document.querySelector('#settingsTabs .nav-link.active');
-        if (activePill && activePill.id === 'departments-tab') {
+        if (activePill && (activePill.id === 'departments-tab' || activePill.id === 'smtp-tab')) {
             saveBtnArea.style.display = 'none';
         }
 
@@ -447,6 +643,15 @@ include 'includes/header.php';
             form.submit();
         });
     });
+
+    // Toggle SMTP password
+    function toggleSmtpPass() {
+        const inp = document.getElementById('smtp_pass');
+        const eye = document.getElementById('smtp_pass_eye');
+        const show = inp.type === 'password';
+        inp.type = show ? 'text' : 'password';
+        eye.className = show ? 'bx bx-hide' : 'bx bx-show';
+    }
 
     // ยืนยันการลบแผนก
     function confirmDelete(name) {
@@ -485,9 +690,9 @@ include 'includes/header.php';
         });
 
         // อัพเดตสถานะปุ่ม
-        var btnAsc  = document.getElementById('sort-asc');
+        var btnAsc = document.getElementById('sort-asc');
         var btnDesc = document.getElementById('sort-desc');
-        var icon    = document.getElementById('sort-icon');
+        var icon = document.getElementById('sort-icon');
         if (btnAsc && btnDesc) {
             btnAsc.classList.toggle('active', direction === 'asc');
             btnDesc.classList.toggle('active', direction === 'desc');

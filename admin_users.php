@@ -193,13 +193,32 @@ include 'includes/header.php';
 <!-- รายการผู้ใช้งาน -->
 <div class="card shadow mb-4">
     <div class="card-header bg-white py-3">
-        <h6 class="m-0 fw-bold text-primary">
-            <i class="bx bx-list-ul me-2"></i>รายการผู้ใช้งานทั้งหมด
-        </h6>
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h6 class="m-0 fw-bold text-primary">
+                <i class="bx bx-list-ul me-2"></i>รายการผู้ใช้งานทั้งหมด
+            </h6>
+            <div class="d-flex flex-wrap gap-1 align-items-center">
+                <small class="text-muted me-1">กรองตามบทบาท:</small>
+                <button type="button" class="btn btn-sm btn-outline-secondary active" id="filterAll"
+                    onclick="filterRole('')">ทั้งหมด</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="filterAdmin"
+                    onclick="filterRole('ผู้ดูแลระบบ')">ผู้ดูแลระบบ</button>
+                <button type="button" class="btn btn-sm btn-outline-warning" id="filterBuilding"
+                    onclick="filterRole('งานอาคาร')">งานอาคาร</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="filterElectrical"
+                    onclick="filterRole('งานไฟฟ้า')">งานไฟฟ้า</button>
+                <button type="button" class="btn btn-sm btn-outline-info" id="filterPlumbing"
+                    onclick="filterRole('งานประปาฯ')">งานประปาฯ</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="filterAC"
+                    onclick="filterRole('งานปรับอากาศ')">งานปรับอากาศ</button>
+                <button type="button" class="btn btn-sm btn-outline-info" id="filterUser"
+                    onclick="filterRole('ผู้ใช้งานทั่วไป')">ผู้ใช้งานทั่วไป</button>
+            </div>
+        </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover align-middle datatable">
+            <table class="table table-hover align-middle datatable" id="usersTable">
                 <thead class="bg-light">
                     <tr>
                         <th>รหัส</th>
@@ -347,12 +366,12 @@ include 'includes/header.php';
                                     <i class="bx bx-user-circle"></i>
                                 </span>
                                 <select class="form-select" id="role" name="role" required>
+                                    <option value="admin">ผู้ดูแลระบบ</option>
                                     <option value="user">ผู้ใช้งานทั่วไป</option>
                                     <option value="building_staff">งานอาคาร</option>
                                     <option value="electrical_staff">งานไฟฟ้า</option>
                                     <option value="plumbing_staff">งานประปาและระบบสุขาภิบาล</option>
                                     <option value="ac_staff">งานระบบปรับอากาศ</option>
-                                    <option value="admin">ผู้ดูแลระบบ</option>
                                 </select>
                             </div>
                         </div>
@@ -435,12 +454,12 @@ include 'includes/header.php';
                                     <i class="bx bx-user-circle"></i>
                                 </span>
                                 <select class="form-select" id="edit_role" name="role" required>
+                                    <option value="admin">ผู้ดูแลระบบ</option>
                                     <option value="user">ผู้ใช้งานทั่วไป</option>
                                     <option value="building_staff">งานอาคาร</option>
                                     <option value="electrical_staff">งานไฟฟ้า</option>
                                     <option value="plumbing_staff">งานประปาและระบบสุขาภิบาล</option>
                                     <option value="ac_staff">งานระบบปรับอากาศ</option>
-                                    <option value="admin">ผู้ดูแลระบบ</option>
                                 </select>
                             </div>
                         </div>
@@ -525,6 +544,44 @@ include 'includes/header.php';
 </div>
 
 <script>
+    // Toggle role filter buttons
+    var currentFilter = '';
+    function filterRole(role) {
+        if (currentFilter === role && role !== '') {
+            // ถ้ากดปุ่มเดิมซ้ำ = ยกเลิก filter
+            currentFilter = '';
+            role = '';
+        } else {
+            currentFilter = role;
+        }
+
+        // อัปเดต active state
+        document.querySelectorAll('[id^="filter"]').forEach(function (btn) {
+            btn.classList.remove('active');
+        });
+        if (role === '') {
+            document.getElementById('filterAll').classList.add('active');
+        }
+
+        // กรองใน DataTable
+        var table = $('#usersTable').DataTable();
+        table.column(5).search(role ? '^' + $.fn.dataTable.util.escapeRegex(role) + '$' : '', true, false).draw();
+    }
+
+    // สาน active ให้ปุ่มที่กด
+    document.querySelectorAll('[id^="filter"]').forEach(function (btn) {
+        if (btn.id !== 'filterAll') {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('[id^="filter"]').forEach(function (b) { b.classList.remove('active'); });
+                if (currentFilter !== '') {
+                    this.classList.add('active');
+                } else {
+                    document.getElementById('filterAll').classList.add('active');
+                }
+            });
+        }
+    });
+
     document.addEventListener('DOMContentLoaded', function () {
         // เปิด modal แก้ไขผู้ใช้
         const editUserModal = document.getElementById('editUserModal');

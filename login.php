@@ -86,6 +86,13 @@ include 'includes/header.php';
                     </div>
                 <?php endif; ?>
 
+                <?php if (isset($_GET['reset']) && $_GET['reset'] === 'success'): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bx bx-check-circle me-1"></i>รีเซ็ตรหัสผ่านสำเร็จ! กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <?php endif; ?>
+
                 <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>">
                     <div class="mb-4">
                         <label for="username" class="form-label">ชื่อผู้ใช้</label>
@@ -100,8 +107,11 @@ include 'includes/header.php';
                     </div>
 
                     <div class="mb-4">
-                        <label for="password" class="form-label">รหัสผ่าน</label>
-                        <div class="input-group">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label for="password" class="form-label mb-0">รหัสผ่าน</label>
+                            <a href="forgot_password.php" class="text-muted small">ลืมรหัสผ่าน?</a>
+                        </div>
+                        <div class="input-group mt-1">
                             <span class="input-group-text bg-light">
                                 <i class="bx bx-lock-alt"></i>
                             </span>
