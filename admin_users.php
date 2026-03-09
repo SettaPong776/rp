@@ -320,6 +320,9 @@ include 'includes/header.php';
                                     <i class="bx bx-lock-alt"></i>
                                 </span>
                                 <input type="password" class="form-control" id="password" name="password" required>
+                                <button class="btn btn-outline-secondary toggle-password" type="button" tabindex="-1" title="แสดง/ซ่อนรหัสผ่าน">
+                                    <i class="bx bx-show"></i>
+                                </button>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -497,6 +500,9 @@ include 'includes/header.php';
                                 <i class="bx bx-lock-alt"></i>
                             </span>
                             <input type="password" class="form-control" id="new_password" name="new_password" required>
+                            <button class="btn btn-outline-secondary toggle-password" type="button" tabindex="-1" title="แสดง/ซ่อนรหัสผ่าน">
+                                <i class="bx bx-show"></i>
+                            </button>
                         </div>
                     </div>
                     <div class="alert alert-warning">
@@ -583,6 +589,24 @@ include 'includes/header.php';
     });
 
     document.addEventListener('DOMContentLoaded', function () {
+        // แสดง/ซ่อนรหัสผ่าน
+        const togglePasswordBtns = document.querySelectorAll('.toggle-password');
+        togglePasswordBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const input = this.previousElementSibling;
+                const icon = this.querySelector('i');
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('bx-show');
+                    icon.classList.add('bx-hide');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('bx-hide');
+                    icon.classList.add('bx-show');
+                }
+            });
+        });
+
         // เปิด modal แก้ไขผู้ใช้
         const editUserModal = document.getElementById('editUserModal');
         if (editUserModal) {
