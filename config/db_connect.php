@@ -246,6 +246,18 @@ function is_staff_role($role)
 }
 
 /**
+ * ตรวจสอบว่า role นั้นมีสิทธิ์เต็ม (admin + head roles ทุกฝ่าย)
+ * ใช้แทนการเช็ค == 'admin' สำหรับฟีเจอร์ที่ต้องการให้หัวหน้างานทำได้
+ */
+function is_admin_role($role)
+{
+    return in_array($role, [
+        'admin',
+        'head_building', 'head_electrical', 'head_plumbing', 'head_ac'
+    ]);
+}
+
+/**
  * แปลงค่า role เป็นชื่อภาษาไทย
  */
 function get_role_label($role)

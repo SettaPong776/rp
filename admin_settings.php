@@ -6,7 +6,7 @@ $page_title = "ตั้งค่าระบบ";
 require_once 'config/db_connect.php';
 
 // ตรวจสอบว่ามีการล็อกอินและเป็นแอดมินหรือไม่
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 'admin') {
+if (!isset($_SESSION['user_id']) || !is_admin_role($_SESSION['role'])) {
     header('Location: login.php');
     exit();
 }

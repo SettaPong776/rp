@@ -62,7 +62,7 @@ include 'includes/header.php';
         <a href="create_request.php" class="btn btn-outline-primary me-2">
             <i class="bx bx-plus-circle me-1"></i>แจ้งซ่อมใหม่
         </a>
-        <?php if ($_SESSION['role'] == 'admin'): ?>
+        <?php if (is_admin_role($_SESSION['role'])): ?>
             <a href="admin_settings.php" class="btn btn-primary">
                 <i class="bx bx-cog me-1"></i>ตั้งค่า
             </a>

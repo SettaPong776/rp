@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ตรวจสอบว่ามีการเชื่อมต่อกับฐานข้อมูลหรือไม่
 if (!isset($conn)) {
     require_once dirname(__FILE__) . '/../config/db_connect.php';
@@ -542,7 +542,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         <i class="bx bx-bar-chart-alt-2"></i>
                         <span>รายงาน</span>
                     </a>
-                    <?php if ($current_user['role'] == 'admin'): ?>
+                    <?php if (is_admin_role($current_user['role'])): ?>
                         <a href="admin_settings.php"
                             class="menu-item <?php echo ($current_page == 'admin_settings.php') ? 'active' : ''; ?>">
                             <i class="bx bx-cog"></i>

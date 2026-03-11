@@ -13,7 +13,7 @@ if (!isset($_SESSION['user_id']) || !is_staff_role($_SESSION['role'])) {
 
 // จัดการการเพิ่มผู้ใช้ใหม่
 if (isset($_POST['add_user'])) {
-    if (!in_array($_SESSION['role'], ['admin'])) {
+    if (!is_admin_role($_SESSION['role'])) {
         $error = 'คุณไม่มีสิทธิ์เพิ่มผู้ใช้ใหม่';
     } else {
         $username = trim($_POST['username']);
@@ -61,7 +61,7 @@ if (isset($_POST['add_user'])) {
 
 // จัดการการแก้ไขผู้ใช้
 if (isset($_POST['edit_user'])) {
-    if (!in_array($_SESSION['role'], ['admin'])) {
+    if (!is_admin_role($_SESSION['role'])) {
         $error = 'คุณไม่มีสิทธิ์แก้ไขข้อมูลผู้ใช้';
     } else {
         $user_id = intval($_POST['user_id']);
@@ -98,7 +98,7 @@ if (isset($_POST['edit_user'])) {
 
 // จัดการการรีเซ็ตรหัสผ่าน
 if (isset($_POST['reset_password'])) {
-    if (!in_array($_SESSION['role'], ['admin'])) {
+    if (!is_admin_role($_SESSION['role'])) {
         $error = 'คุณไม่มีสิทธิ์รีเซ็ตรหัสผ่าน';
     } else {
         $user_id = intval($_POST['user_id']);
@@ -127,7 +127,7 @@ if (isset($_POST['reset_password'])) {
 
 // จัดการการลบผู้ใช้
 if (isset($_POST['delete_user'])) {
-    if (!in_array($_SESSION['role'], ['admin'])) {
+    if (!is_admin_role($_SESSION['role'])) {
         $error = 'คุณไม่มีสิทธิ์ลบผู้ใช้';
     } else {
         $user_id = intval($_POST['user_id']);
@@ -168,7 +168,7 @@ include 'includes/header.php';
     <h1 class="h3 mb-0 text-gray-800">
         <i class="bx bx-user me-2"></i>จัดการผู้ใช้งาน
     </h1>
-    <?php if ($_SESSION['role'] == 'admin'): ?>
+    <?php if (is_admin_role($_SESSION['role'])): ?>
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
             <i class="bx bx-user-plus me-1"></i>เพิ่มผู้ใช้ใหม่
         </button>
@@ -269,7 +269,7 @@ include 'includes/header.php';
                             <td><?php echo thai_date($user['created_at'], 'j M Y'); ?></td>
                             <td>
                                 <div class="btn-group">
-                                    <?php if ($_SESSION['role'] == 'admin'): ?>
+                                    <?php if (is_admin_role($_SESSION['role'])): ?>
                                         <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
                                             data-bs-target="#editUserModal" data-user-id="<?php echo $user['user_id']; ?>"
                                             data-username="<?php echo $user['username']; ?>"
