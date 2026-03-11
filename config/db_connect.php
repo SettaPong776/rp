@@ -227,7 +227,10 @@ function insert_request_history($request_id, $user_id, $status, $remark = '', $i
  */
 function get_all_staff_roles()
 {
-    return ['building_staff', 'electrical_staff', 'plumbing_staff', 'ac_staff'];
+    return [
+        'building_staff', 'electrical_staff', 'plumbing_staff', 'ac_staff',
+        'head_building', 'head_electrical', 'head_plumbing', 'head_ac'
+    ];
 }
 
 /**
@@ -235,7 +238,11 @@ function get_all_staff_roles()
  */
 function is_staff_role($role)
 {
-    return in_array($role, ['admin', 'building_staff', 'electrical_staff', 'plumbing_staff', 'ac_staff']);
+    return in_array($role, [
+        'admin',
+        'building_staff', 'electrical_staff', 'plumbing_staff', 'ac_staff',
+        'head_building', 'head_electrical', 'head_plumbing', 'head_ac'
+    ]);
 }
 
 /**
@@ -244,12 +251,16 @@ function is_staff_role($role)
 function get_role_label($role)
 {
     $labels = [
-        'admin' => 'ผู้ดูแลระบบ',
-        'building_staff' => 'งานอาคาร',
+        'admin'            => 'ผู้ดูแลระบบ',
+        'building_staff'   => 'งานอาคาร',
         'electrical_staff' => 'งานไฟฟ้า',
-        'plumbing_staff' => 'งานประปาและระบบสุขาภิบาล',
-        'ac_staff' => 'งานระบบปรับอากาศ',
-        'user' => 'ผู้ใช้งานทั่วไป',
+        'plumbing_staff'   => 'งานประปาและระบบสุขาภิบาล',
+        'ac_staff'         => 'งานระบบปรับอากาศ',
+        'head_building'    => 'หัวหน้างานอาคาร',
+        'head_electrical'  => 'หัวหน้างานไฟฟ้า',
+        'head_plumbing'    => 'หัวหน้างานประปาฯ',
+        'head_ac'          => 'หัวหน้างานปรับอากาศ',
+        'user'             => 'ผู้ใช้งานทั่วไป',
     ];
     return $labels[$role] ?? 'ผู้ใช้งาน';
 }

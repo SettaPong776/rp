@@ -197,7 +197,7 @@ $broadcast_error = '';
 if (isset($_POST['send_broadcast'])) {
     $bc_subject = trim($_POST['bc_subject'] ?? '');
     $bc_body_raw = trim($_POST['bc_body'] ?? '');
-    $bc_target = $_POST['bc_target'] ?? 'all';   // all | building_staff | user
+    $bc_target = $_POST['bc_target'] ?? 'all';   // all | building_staff | electrical_staff | plumbing_staff | ac_staff | maintenance_all | head_building | head_electrical | head_plumbing | head_ac | heads_all | admin | user
 
     if (empty($bc_subject) || empty($bc_body_raw)) {
         $broadcast_error = 'กรุณากรอกหัวข้อและเนื้อหาประกาศให้ครบถ้วน';
@@ -207,6 +207,24 @@ if (isset($_POST['send_broadcast'])) {
             $bc_query = "SELECT fullname, email FROM users WHERE email IS NOT NULL AND email != ''";
         } elseif ($bc_target === 'building_staff') {
             $bc_query = "SELECT fullname, email FROM users WHERE role = 'building_staff' AND email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'electrical_staff') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role = 'electrical_staff' AND email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'plumbing_staff') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role = 'plumbing_staff' AND email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'ac_staff') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role = 'ac_staff' AND email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'maintenance_all') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role IN ('building_staff','electrical_staff','plumbing_staff','ac_staff','head_building','head_electrical','head_plumbing','head_ac') AND email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'head_building') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role = 'head_building' AND email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'head_electrical') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role = 'head_electrical' AND email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'head_plumbing') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role = 'head_plumbing' AND email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'head_ac') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role = 'head_ac' AND email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'heads_all') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role IN ('head_building','head_electrical','head_plumbing','head_ac') AND email IS NOT NULL AND email != ''";
         } elseif ($bc_target === 'admin') {
             $bc_query = "SELECT fullname, email FROM users WHERE role = 'admin' AND email IS NOT NULL AND email != ''";
         } else {
@@ -682,11 +700,11 @@ include 'includes/header.php';
                         <form method="POST">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">ส่งถึง <span class="text-danger">*</span></label>
-                                <div class="d-flex gap-3">
+                                <div class="d-flex flex-wrap gap-3">
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="bc_target" id="bc_all"
                                             value="all" checked>
-                                        <label class="form-check-label" for="bc_all">
+                                        <label class="form-check-label fw-semibold text-info" for="bc_all">
                                             <i class="bx bx-group me-1"></i>ทุกคน
                                         </label>
                                     </div>
@@ -694,7 +712,14 @@ include 'includes/header.php';
                                         <input class="form-check-input" type="radio" name="bc_target" id="bc_user"
                                             value="user">
                                         <label class="form-check-label" for="bc_user">
-                                            <i class="bx bx-user me-1"></i> ผู้ใช้งานทั่วไป
+                                            <i class="bx bx-user me-1"></i>ผู้ใช้งานทั่วไป
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_admin"
+                                            value="admin">
+                                        <label class="form-check-label fw-semibold text-danger" for="bc_admin">
+                                            <i class="bx bx-shield-alt-2 me-1"></i>ผู้ดูแลระบบ
                                         </label>
                                     </div>
                                     <div class="form-check">
@@ -705,12 +730,68 @@ include 'includes/header.php';
                                         </label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_admin"
-                                            value="admin">
-                                        <label class="form-check-label" for="bc_admin">
-                                            <i class="bx bx-shield-alt-2 me-1"></i>ผู้ดูแลระบบ
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_electrical"
+                                            value="electrical_staff">
+                                        <label class="form-check-label" for="bc_electrical">
+                                            <i class="bx bx-bolt-circle me-1"></i>งานไฟฟ้า
                                         </label>
                                     </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_plumbing"
+                                            value="plumbing_staff">
+                                        <label class="form-check-label" for="bc_plumbing">
+                                            <i class="bx bx-water me-1"></i>งานประปาฯ
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_ac"
+                                            value="ac_staff">
+                                        <label class="form-check-label" for="bc_ac">
+                                            <i class="bx bx-wind me-1"></i>งานปรับอากาศ
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_maintenance_all"
+                                            value="maintenance_all">
+                                        <label class="form-check-label fw-semibold text-primary" for="bc_maintenance_all">
+                                            <i class="bx bx-wrench me-1"></i>แจ้งฝ่ายซ่อมบำรุงทั้งหมด
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_heads_all"
+                                            value="heads_all">
+                                        <label class="form-check-label fw-semibold text-warning" for="bc_heads_all">
+                                            <i class="bx bx-crown me-1"></i>หัวหน้างานทั้งหมด
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_head_building"
+                                            value="head_building">
+                                        <label class="form-check-label" for="bc_head_building">
+                                            <i class="bx bx-hard-hat me-1"></i>หัวหน้างานอาคาร
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_head_electrical"
+                                            value="head_electrical">
+                                        <label class="form-check-label" for="bc_head_electrical">
+                                            <i class="bx bx-bolt-circle me-1"></i>หัวหน้างานไฟฟ้า
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_head_plumbing"
+                                            value="head_plumbing">
+                                        <label class="form-check-label" for="bc_head_plumbing">
+                                            <i class="bx bx-water me-1"></i>หัวหน้างานประปาฯ
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_head_ac"
+                                            value="head_ac">
+                                        <label class="form-check-label" for="bc_head_ac">
+                                            <i class="bx bx-wind me-1"></i>หัวหน้างานปรับอากาศ
+                                        </label>
+                                    </div>                   
                                 </div>
                             </div>
 
@@ -747,31 +828,71 @@ include 'includes/header.php';
                                 $cnt_all = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE email IS NOT NULL AND email != ''"))['c'];
                                 $cnt_user = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='user' AND email IS NOT NULL AND email != ''"))['c'];
                                 $cnt_staff = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='building_staff' AND email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_electrical = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='electrical_staff' AND email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_plumbing = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='plumbing_staff' AND email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_ac = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='ac_staff' AND email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_head_building = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='head_building' AND email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_head_electrical = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='head_electrical' AND email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_head_plumbing = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='head_plumbing' AND email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_head_ac = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='head_ac' AND email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_heads_all = $cnt_head_building + $cnt_head_electrical + $cnt_head_plumbing + $cnt_head_ac;
+                                $cnt_maintenance = $cnt_staff + $cnt_electrical + $cnt_plumbing + $cnt_ac + $cnt_heads_all;
                                 $cnt_admin = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='admin' AND email IS NOT NULL AND email != ''"))['c'];
                                 ?>
                                 <ul class="list-unstyled mb-0">
                                     <li class="mb-2">
-                                        <span class="badge bg-primary me-2">
-                                            <?php echo $cnt_all; ?>
-                                        </span>
+                                        <span class="badge bg-primary me-2"><?php echo $cnt_all; ?></span>
                                         <strong>ทุกคน</strong> (มีอีเมล)
                                     </li>
                                     <li class="mb-2">
-                                        <span class="badge bg-secondary me-2">
-                                            <?php echo $cnt_user; ?>
-                                        </span>
+                                        <span class="badge bg-secondary me-2"><?php echo $cnt_user; ?></span>
                                         ผู้ใช้งานทั่วไป
                                     </li>
+                                    <li class="mb-1 mt-2"><small class="fw-bold text-muted text-uppercase">เจ้าหน้าที่</small></li>
                                     <li class="mb-2">
-                                        <span class="badge bg-info text-dark me-2">
-                                            <?php echo $cnt_staff; ?>
-                                        </span>
+                                        <span class="badge bg-info text-dark me-2"><?php echo $cnt_staff; ?></span>
                                         งานอาคาร
                                     </li>
+                                    <li class="mb-2">
+                                        <span class="badge bg-warning text-dark me-2"><?php echo $cnt_electrical; ?></span>
+                                        งานไฟฟ้า
+                                    </li>
+                                    <li class="mb-2">
+                                        <span class="badge bg-info text-dark me-2"><?php echo $cnt_plumbing; ?></span>
+                                        งานประปาฯ
+                                    </li>
+                                    <li class="mb-2">
+                                        <span class="badge bg-success me-2"><?php echo $cnt_ac; ?></span>
+                                        งานปรับอากาศ
+                                    </li>
+                                    <li class="mb-1 mt-2"><small class="fw-bold text-muted text-uppercase">หัวหน้างาน</small></li>
+                                    <li class="mb-2">
+                                        <span class="badge me-2" style="background:#b45309"><?php echo $cnt_head_building; ?></span>
+                                        หัวหน้างานอาคาร
+                                    </li>
+                                    <li class="mb-2">
+                                        <span class="badge me-2" style="background:#1d4ed8"><?php echo $cnt_head_electrical; ?></span>
+                                        หัวหน้างานไฟฟ้า
+                                    </li>
+                                    <li class="mb-2">
+                                        <span class="badge me-2" style="background:#0e7490"><?php echo $cnt_head_plumbing; ?></span>
+                                        หัวหน้างานประปาฯ
+                                    </li>
+                                    <li class="mb-2">
+                                        <span class="badge me-2" style="background:#374151"><?php echo $cnt_head_ac; ?></span>
+                                        หัวหน้างานปรับอากาศ
+                                    </li>
+                                    <li class="mb-1 mt-2"><small class="fw-bold text-muted text-uppercase">รวม</small></li>
+                                    <li class="mb-2">
+                                        <span class="badge bg-primary me-2"><?php echo $cnt_maintenance; ?></span>
+                                        <strong>ฝ่ายซ่อมบำรุงทั้งหมด</strong>
+                                    </li>
+                                    <li class="mb-2">
+                                        <span class="badge bg-warning text-dark me-2"><?php echo $cnt_heads_all; ?></span>
+                                        <strong>หัวหน้างานทั้งหมด</strong>
+                                    </li>
                                     <li>
-                                        <span class="badge bg-danger me-2">
-                                            <?php echo $cnt_admin; ?>
-                                        </span>
+                                        <span class="badge bg-danger me-2"><?php echo $cnt_admin; ?></span>
                                         ผู้ดูแลระบบ
                                     </li>
                                 </ul>

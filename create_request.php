@@ -117,9 +117,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     "\nสถานที่: " . ($location ?: 'ไม่ระบุ') .
                     "\nเวลา: " . thai_date(date('Y-m-d H:i:s')));
 
-                // ===== ส่งอีเมลแจ้งเตือน building_staff ทุกคน =====
+                // ===== ส่งอีเมลแจ้งเตือน building_staff + head roles ทุกคน =====
                 $staff_result = db_select(
-                    "SELECT fullname, email FROM users WHERE role = 'building_staff' AND email IS NOT NULL AND email != ''",
+                    "SELECT fullname, email FROM users
+                     WHERE role IN ('building_staff','head_building','head_electrical','head_plumbing','head_ac')
+                     AND email IS NOT NULL AND email != ''",
                     "",
                     []
                 );
