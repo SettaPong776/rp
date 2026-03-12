@@ -16,6 +16,15 @@ $user_id = $_SESSION['user_id'];
 $result = db_select("SELECT * FROM users WHERE user_id = ?", "i", [$user_id]);
 $user = mysqli_fetch_assoc($result);
 
+// ดึงข้อมูลแผนกทั้งหมดสำหรับตัวเลือก
+$departments_query = db_select("SELECT * FROM departments ORDER BY sort_order ASC, name ASC");
+$departments_list = [];
+if ($departments_query) {
+    while ($row = mysqli_fetch_assoc($departments_query)) {
+        $departments_list[] = $row['name'];
+    }
+}
+
 // จัดการการแก้ไขข้อมูลส่วนตัว
 if (isset($_POST['update_profile'])) {
     $fullname = trim($_POST['fullname']);
@@ -249,8 +258,14 @@ include 'includes/header.php';
                                     <span class="input-group-text bg-light">
                                         <i class="bx bx-building"></i>
                                     </span>
-                                    <input type="text" class="form-control" id="department" name="department"
-                                        value="<?php echo $user['department']; ?>">
+                                    <select class="form-select" id="department" name="department">
+                                        <option value="">-- ไม่ระบุแผนก/ฝ่าย --</option>
+                                        <?php foreach ($departments_list as $dept): ?>
+                                            <option value="<?php echo htmlspecialchars($dept, ENT_QUOTES); ?>" <?php echo ($user['department'] == $dept) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($dept); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
                             </div>
                             <div class="col-12">

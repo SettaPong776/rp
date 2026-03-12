@@ -157,7 +157,16 @@ if (isset($_POST['delete_user'])) {
 
 // ดึงข้อมูลผู้ใช้ทั้งหมด
 $users = db_select("SELECT * FROM users ORDER BY role, fullname");
+$total_users = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt FROM users"))['cnt'] ?? 0;
 
+// ดึงข้อมูลแผนกทั้งหมดสำหรับตัวเลือก
+$departments_query = db_select("SELECT * FROM departments ORDER BY sort_order ASC, name ASC");
+$departments_list = [];
+if ($departments_query) {
+    while ($row = mysqli_fetch_assoc($departments_query)) {
+        $departments_list[] = $row['name'];
+    }
+}
 
 // แสดงหน้าเว็บ
 include 'includes/header.php';
@@ -194,8 +203,11 @@ include 'includes/header.php';
 <div class="card shadow mb-4">
     <div class="card-header bg-white py-3">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-            <h6 class="m-0 fw-bold text-primary">
-                <i class="bx bx-list-ul me-2"></i>รายการผู้ใช้งานทั้งหมด
+            <h6 class="m-0 fw-bold text-primary d-flex align-items-center gap-2">
+                <i class="bx bx-list-ul me-1"></i>รายการผู้ใช้งานทั้งหมด
+                <span class="badge rounded-pill bg-primary fs-6 px-3">
+                    <i class="bx bx-user me-1"></i><?php echo $total_users; ?> คน
+                </span>
             </h6>
             <div class="d-flex align-items-center gap-2">
                 <small class="text-muted text-nowrap">กรองตามบทบาท:</small>
@@ -362,7 +374,12 @@ include 'includes/header.php';
                                 <span class="input-group-text bg-light">
                                     <i class="bx bx-building"></i>
                                 </span>
-                                <input type="text" class="form-control" id="department" name="department">
+                                <select class="form-select" id="department" name="department">
+                                    <option value="">-- ไม่ระบุแผนก/ฝ่าย --</option>
+                                    <?php foreach ($departments_list as $dept): ?>
+                                        <option value="<?php echo htmlspecialchars($dept, ENT_QUOTES); ?>"><?php echo htmlspecialchars($dept); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -462,7 +479,12 @@ include 'includes/header.php';
                                 <span class="input-group-text bg-light">
                                     <i class="bx bx-building"></i>
                                 </span>
-                                <input type="text" class="form-control" id="edit_department" name="department">
+                                <select class="form-select" id="edit_department" name="department">
+                                    <option value="">-- ไม่ระบุแผนก/ฝ่าย --</option>
+                                    <?php foreach ($departments_list as $dept): ?>
+                                        <option value="<?php echo htmlspecialchars($dept, ENT_QUOTES); ?>"><?php echo htmlspecialchars($dept); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-6">
