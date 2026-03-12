@@ -78,6 +78,22 @@ if (isset($_POST['delete_department'])) {
     }
 }
 
+// แก้ไขแผนก
+if (isset($_POST['edit_department'])) {
+    $dept_id   = (int) $_POST['dept_id'];
+    $dept_name = trim($_POST['dept_name_edit']);
+    if (empty($dept_name)) {
+        $dept_error = 'กรุณากรอกชื่อแผนก/ฝ่าย';
+    } else {
+        $result = db_execute("UPDATE departments SET name = ? WHERE id = ?", "si", [$dept_name, $dept_id]);
+        if ($result) {
+            $dept_success = "แก้ไขแผนก/ฝ่ายเป็น \"$dept_name\" เรียบร้อยแล้ว";
+        } else {
+            $dept_error = 'ไม่สามารถแก้ไขได้ อาจมีชื่อแผนก/ฝ่ายนี้อยู่แล้ว';
+        }
+    }
+}
+
 // ========== จัดการการอัพเดตการตั้งค่า ==========
 if (isset($_POST['update_settings'])) {
     $site_name = clean_input($_POST['site_name']);
@@ -340,17 +356,10 @@ include 'includes/header.php';
 <?php endif; ?>
 
 <?php if (!empty($dept_success)): ?>
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bx bx-check-circle me-1"></i><?php echo $dept_success; ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+<script>window._deptSuccess = <?php echo json_encode($dept_success); ?>;</script>
 <?php endif; ?>
-
 <?php if (!empty($dept_error)): ?>
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="bx bx-error-circle me-1"></i><?php echo $dept_error; ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+<script>window._deptError = <?php echo json_encode($dept_error); ?>;</script>
 <?php endif; ?>
 
 <!-- แท็บการตั้งค่า -->
@@ -641,7 +650,7 @@ include 'includes/header.php';
                                                         ชื่อแผนก/ฝ่าย
                                                         <i class="bx bx-chevron-up ms-1" id="sort-icon"></i>
                                                     </th>
-                                                    <th width="80" class="text-center">จัดการ</th>
+                                                    <th width="110" class="text-center">จัดการ</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -653,15 +662,23 @@ include 'includes/header.php';
                                                             <?php echo htmlspecialchars($dept['name']); ?>
                                                         </td>
                                                         <td class="text-center">
+                                                            <div class="d-flex justify-content-center gap-1">
+                                                            <!-- ปุ่มแก้ไข -->
+                                                            <button type="button" class="btn btn-sm btn-outline-warning"
+                                                                title="แก้ไข"
+                                                                onclick="openEditDept(<?php echo $dept['id']; ?>, '<?php echo htmlspecialchars($dept['name'], ENT_QUOTES); ?>')">
+                                                                <i class="bx bx-edit"></i>
+                                                            </button>
+                                                            <!-- ปุ่มลบ -->
                                                             <form method="POST" action="?tab=departments"
                                                                 onsubmit="return confirmDelete('<?php echo htmlspecialchars($dept['name'], ENT_QUOTES); ?>')">
-                                                                <input type="hidden" name="dept_id"
-                                                                    value="<?php echo $dept['id']; ?>">
+                                                                <input type="hidden" name="dept_id" value="<?php echo $dept['id']; ?>">
                                                                 <button type="submit" name="delete_department"
                                                                     class="btn btn-sm btn-outline-danger" title="ลบ">
                                                                     <i class="bx bx-trash"></i>
                                                                 </button>
                                                             </form>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>
@@ -1048,6 +1065,13 @@ include 'includes/header.php';
     });
 </script>
 
+<!-- ===== hidden form สำหรับ submit แก้ไขแผนก ===== -->
+<form id="editDeptForm" method="POST" action="?tab=departments" style="display:none;">
+    <input type="hidden" name="dept_id" id="edit_dept_id">
+    <input type="hidden" name="dept_name_edit" id="edit_dept_name_hidden">
+    <input type="hidden" name="edit_department" value="1">
+</form>
+
 <?php
 // แสดงส่วน footer
 include 'includes/footer.php';
@@ -1055,6 +1079,69 @@ include 'includes/footer.php';
 
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// แสดง popup แจ้งเตือนผลลัพธ์การจัดการแผนก
+document.addEventListener('DOMContentLoaded', function() {
+    if (window._deptError) {
+        Swal.fire({
+            icon: 'error',
+            title: 'เกิดข้อผิดพลาด',
+            text: window._deptError,
+            confirmButtonColor: '#e74a3b',
+            confirmButtonText: 'ตกลง'
+        });
+    } else if (window._deptSuccess) {
+        Swal.fire({
+            icon: 'success',
+            title: 'สำเร็จ!',
+            text: window._deptSuccess,
+            confirmButtonColor: '#1cc88a',
+            confirmButtonText: 'ตกลง',
+            timer: 2500,
+            timerProgressBar: true
+        });
+    }
+});
+</script>
+<script>
+function openEditDept(id, currentName) {
+    Swal.fire({
+        title: '<i class="bx bx-edit me-2 text-warning"></i>แก้ไขแผนก/ฝ่าย',
+        html:
+            '<div class="text-start">' +
+            '<label class="form-label fw-semibold mb-1">ชื่อแผนก/ฝ่าย <span class="text-danger">*</span></label>' +
+            '<div class="input-group">' +
+            '<span class="input-group-text bg-light"><i class="bx bx-building"></i></span>' +
+            '<input type="text" id="swal-dept-name" class="form-control" value="' + currentName + '" placeholder="กรอกชื่อแผนก/ฝ่าย">' +
+            '</div></div>',
+        showCancelButton: true,
+        confirmButtonText: '<i class="bx bx-save me-1"></i>บันทึก',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#f6c23e',
+        cancelButtonColor: '#6c757d',
+        customClass: { confirmButton: 'text-dark' },
+        focusConfirm: false,
+        didOpen: function() {
+            const inp = document.getElementById('swal-dept-name');
+            inp.focus(); inp.select();
+            inp.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); Swal.clickConfirm(); }
+            });
+        },
+        preConfirm: function() {
+            const val = document.getElementById('swal-dept-name').value.trim();
+            if (!val) { Swal.showValidationMessage('กรุณากรอกชื่อแผนก/ฝ่าย'); return false; }
+            return val;
+        }
+    }).then(function(result) {
+        if (result.isConfirmed && result.value) {
+            document.getElementById('edit_dept_id').value = id;
+            document.getElementById('edit_dept_name_hidden').value = result.value;
+            document.getElementById('editDeptForm').submit();
+        }
+    });
+}
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const btnSend = document.getElementById('btn-send-broadcast');

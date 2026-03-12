@@ -115,9 +115,14 @@ function db_execute($query, $types = "", $params = [])
         mysqli_stmt_bind_param($stmt, $types, ...$params);
     }
 
-    $success = mysqli_stmt_execute($stmt);
-    if (!$success) {
-        error_log("Execute failed: " . mysqli_stmt_error($stmt));
+    try {
+        $success = mysqli_stmt_execute($stmt);
+        if (!$success) {
+            error_log("Execute failed: " . mysqli_stmt_error($stmt));
+        }
+    } catch (Exception $e) {
+        error_log("Execute exception: " . $e->getMessage());
+        $success = false;
     }
 
     mysqli_stmt_close($stmt);
@@ -145,7 +150,15 @@ function db_insert($query, $types = "", $params = [])
         mysqli_stmt_bind_param($stmt, $types, ...$params);
     }
 
-    if (!mysqli_stmt_execute($stmt)) {
+    try {
+        $executed = mysqli_stmt_execute($stmt);
+    } catch (Exception $e) {
+        error_log("Execute exception: " . $e->getMessage());
+        mysqli_stmt_close($stmt);
+        return false;
+    }
+
+    if (!$executed) {
         error_log("Execute failed: " . mysqli_stmt_error($stmt));
         mysqli_stmt_close($stmt);
         return false;
