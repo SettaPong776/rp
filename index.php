@@ -37,7 +37,16 @@ include 'includes/header.php';
                 <div class="p-5">
                     <h1 class="display-4 fw-bold text-primary mb-3">ระบบแจ้งซ่อมออนไลน์</h1>
                     <p class="lead mb-4">
-                        ระบบแจ้งซ่อมออนไลน์ที่ช่วยให้คุณแจ้งซ่อมและติดตามการซ่อมบำรุงได้อย่างสะดวกและรวดเร็ว</p>
+                        ระบบแจ้งซ่อมออนไลน์ที่ช่วยให้คุณแจ้งซ่อมและติดตามการซ่อมบำรุงได้อย่างสะดวกและรวดเร็ว </p>
+                        <div class="alert alert-warning border-0 shadow-sm mb-4" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="bx bx-info-circle me-2 fs-4"></i>
+        <div>
+            <strong>ประกาศ:</strong> ระบบนี้ไม่รองรับการแจ้งซ่อมอินเทอร์เน็ตหรือคอมพิวเตอร์ ณ ขณะนี้ 
+            <a href="#" class="alert-link text-decoration-underline">กรุณาติดต่อที่ศูนย์คอมพิวเตอร์ โทร : 50001</a>
+        </div>
+    </div>
+</div>
                     <div class="d-grid gap-2 d-md-flex">
                         <a href="login.php" class="btn btn-primary btn-lg px-4 me-md-2">
                             <i class="bx bx-log-in me-1"></i>เข้าสู่ระบบ
