@@ -262,10 +262,13 @@ include 'includes/header.php';
 
 <!-- ฟอร์มแจ้งซ่อม -->
 <div class="card shadow mb-4">
-    <div class="card-header bg-white py-3">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="m-0 fw-bold text-primary">
-            <i class="bx bx-edit me-2"></i>กรอกข้อมูลการแจ้งซ่อม
+            <i class="bx bx-edit me-2"></i>กรอกข้อมูลการแจ้งซ่อม 
         </h6>
+        <div class="text-primary small fw-semibold bg-primary bg-opacity-10 px-3 py-2 rounded">
+            <i class="bx bx-error-circle me-1"></i>ประกาศ: ระบบนี้ไม่รองรับการแจ้งซ่อมอินเทอร์เน็ตหรือคอมพิวเตอร์ ณ ขณะนี้ กรุณาติดต่อที่ศูนย์คอมพิวเตอร์ โทร : 50001
+        </div>
     </div>
     <div class="card-body">
         <form method="POST" enctype="multipart/form-data">
