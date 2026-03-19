@@ -216,10 +216,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
   </table>
 </body></html>';
 
+                    $staff_emails = [];
                     while ($staff = mysqli_fetch_assoc($staff_result)) {
                         if (!empty($staff['email'])) {
-                            send_email($staff['email'], $email_subject, $email_body);
+                            $staff_emails[] = $staff['email'];
                         }
+                    }
+                    if (!empty($staff_emails)) {
+                        send_email($staff_emails, $email_subject, $email_body);
                     }
                 }
 

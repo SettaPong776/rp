@@ -347,7 +347,19 @@ function send_email($to, $subject, $body)
     $headers = "MIME-Version: 1.0\r\n";
     $headers .= "Content-type: text/html; charset=UTF-8\r\n";
     $headers .= "From: {$mail_from_name} <noreply@repair.local>\r\n";
-    return mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, $headers);
+    
+    $to_address = '';
+    if (is_array($to)) {
+        if (empty($to)) return false;
+        $to_address = array_shift($to);
+        if (!empty($to)) {
+            $headers .= "Bcc: " . implode(',', $to) . "\r\n";
+        }
+    } else {
+        $to_address = $to;
+    }
+
+    return mail($to_address, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, $headers);
 }
 
 /**
@@ -394,7 +406,19 @@ function send_email_smtp($to, $subject, $body, $host, $port, $username, $passwor
         $mail->CharSet = 'UTF-8';
         $mail->Encoding = 'base64';
         $mail->setFrom($from, $from_name);
-        $mail->addAddress($to);
+        
+        if (is_array($to)) {
+            if (empty($to)) return false;
+            $mail->addAddress(array_shift($to));
+            foreach ($to as $bcc_email) {
+                if (!empty(trim($bcc_email))) {
+                    $mail->addBCC(trim($bcc_email));
+                }
+            }
+        } else {
+            $mail->addAddress($to);
+        }
+
         $mail->isHTML(true);
         $mail->Subject = $subject;
         $mail->Body = $body;

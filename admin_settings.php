@@ -254,8 +254,7 @@ if (isset($_POST['send_broadcast'])) {
         // template อีเมล
         $site_name_bc = $settings['site_name'] ?? 'ระบบแจ้งซ่อม';
 
-        while ($bc_user = mysqli_fetch_assoc($bc_result)) {
-            $bc_html = '<!DOCTYPE html>
+        $bc_html = '<!DOCTYPE html>
 <html lang="th"><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:30px 0;">
@@ -270,7 +269,7 @@ if (isset($_POST['send_broadcast'])) {
         </tr>
         <tr>
           <td style="padding:30px 40px;">
-            <p style="color:#333;margin:0 0 6px;">เรียน คุณ <strong>' . htmlspecialchars($bc_user['fullname']) . '</strong>,</p>
+            <p style="color:#333;margin:0 0 6px;">เรียน <strong>ผู้ใช้งานระบบ</strong>,</p>
             <div style="border-top:2px solid #e9ecef;margin:18px 0;"></div>
             <div style="color:#444;font-size:15px;line-height:1.8;">' . nl2br(htmlspecialchars($bc_body_raw)) . '</div>
             <div style="border-top:2px solid #e9ecef;margin:24px 0;"></div>
@@ -286,8 +285,18 @@ if (isset($_POST['send_broadcast'])) {
   </table>
 </body></html>';
 
-            $ok = send_email($bc_user['email'], $bc_subject, $bc_html);
-            $ok ? $sent_count++ : $fail_count++;
+        $bc_emails = [];
+        while ($bc_user = mysqli_fetch_assoc($bc_result)) {
+            $bc_emails[] = $bc_user['email'];
+        }
+
+        if (!empty($bc_emails)) {
+            $ok = send_email($bc_emails, $bc_subject, $bc_html);
+            if ($ok) {
+                $sent_count = count($bc_emails);
+            } else {
+                $fail_count = count($bc_emails);
+            }
         }
 
         if ($sent_count > 0) {
