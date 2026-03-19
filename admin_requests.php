@@ -244,7 +244,7 @@ include 'includes/header.php';
                     <tbody>
                         <?php while ($request = mysqli_fetch_assoc($requests)): ?>
                             <tr>
-                                <td>#<?php echo $request['request_id']; ?></td>
+                                <td data-sort="<?php echo $request['request_id']; ?>">#<?php echo $request['request_id']; ?></td>
                                 <td><?php echo $request['requester_name']; ?></td>
                                 <td><?php echo $request['title']; ?></td>
                                 <td><?php echo $request['category_name']; ?></td>
