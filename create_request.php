@@ -329,10 +329,6 @@ include 'includes/header.php';
         <h6 class="m-0 fw-bold text-primary">
             <i class="bx bx-edit me-2"></i>กรอกข้อมูลการแจ้งซ่อม
         </h6>
-        <div class="text-primary small fw-semibold bg-primary bg-opacity-10 px-3 py-2 rounded">
-            <i class="bx bx-info-circle me-1"></i>ประกาศ: หมวดหมู่คอมพิวเตอร์ เครือข่าย และอื่นๆ
-            จะแจ้งเตือนไปยังเจ้าหน้าที่ศูนย์คอมพิวเตอร์โดยอัตโนมัติ
-        </div>
     </div>
     <div class="card-body">
         <form method="POST" enctype="multipart/form-data">
