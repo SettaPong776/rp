@@ -226,6 +226,9 @@ include 'includes/header.php';
                         <option value="งานประปาฯ">งานประปาฯ</option>
                         <option value="งานปรับอากาศ">งานปรับอากาศ</option>
                     </optgroup>
+                    <optgroup label="── ศูนย์คอมพิวเตอร์ ──">
+                        <option value="เจ้าหน้าที่ศูนย์คอมพิวเตอร์">เจ้าหน้าที่ศูนย์คอมพิวเตอร์</option>
+                    </optgroup>
                     <option value="ผู้ใช้งานทั่วไป">ผู้ใช้งานทั่วไป</option>
                 </select>
             </div>
@@ -274,6 +277,8 @@ include 'includes/header.php';
                                     <span class="badge text-white" style="background:#0e7490;">หัวหน้างานประปาฯ</span>
                                 <?php elseif ($user['role'] == 'head_ac'): ?>
                                     <span class="badge text-white" style="background:#374151;">หัวหน้างานปรับอากาศ</span>
+                                <?php elseif ($user['role'] == 'computer_staff'): ?>
+                                    <span class="badge text-white" style="background:#0891b2;">เจ้าหน้าที่ศูนย์คอมพิวเตอร์</span>
                                 <?php else: ?>
                                     <span class="badge bg-info">ผู้ใช้งานทั่วไป</span>
                                 <?php endif; ?>
@@ -416,6 +421,9 @@ include 'includes/header.php';
                                         <option value="plumbing_staff">งานประปาและระบบสุขาภิบาล</option>
                                         <option value="ac_staff">งานระบบปรับอากาศ</option>
                                     </optgroup>
+                                    <optgroup label="--- ศูนย์คอมพิวเตอร์ ---">
+                                        <option value="computer_staff">เจ้าหน้าที่ศูนย์คอมพิวเตอร์</option>
+                                    </optgroup>
                                 </select>
                             </div>
                         </div>
@@ -520,6 +528,9 @@ include 'includes/header.php';
                                         <option value="electrical_staff">งานไฟฟ้า</option>
                                         <option value="plumbing_staff">งานประปาและระบบสุขาภิบาล</option>
                                         <option value="ac_staff">งานระบบปรับอากาศ</option>
+                                    </optgroup>
+                                    <optgroup label="--- ศูนย์คอมพิวเตอร์ ---">
+                                        <option value="computer_staff">เจ้าหน้าที่ศูนย์คอมพิวเตอร์</option>
                                     </optgroup>
                                 </select>
                             </div>

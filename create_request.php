@@ -126,21 +126,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     []
                 );
 
-                if ($staff_result && mysqli_num_rows($staff_result) > 0) {
-                    // สร้างลิงก์ดูรายละเอียด
-                    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                    $base_url = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']);
-                    $view_link = $base_url . '/view_request.php?id=' . $request_id;
+                // สร้างลิงก์ดูรายละเอียด
+                $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $base_url = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']);
+                $view_link = $base_url . '/view_request.php?id=' . $request_id;
 
-                    $priority_badge = match ($priority) {
-                        'urgent' => '<span style="background:#dc3545;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🔴 เร่งด่วน</span>',
-                        'high' => '<span style="background:#fd7e14;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🟠 สูง</span>',
-                        'low' => '<span style="background:#20c997;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🟢 ต่ำ</span>',
-                        default => '<span style="background:#4e73df;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🔵 ปานกลาง</span>',
-                    };
+                $priority_badge = match ($priority) {
+                    'urgent' => '<span style="background:#dc3545;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🔴 เร่งด่วน</span>',
+                    'high' => '<span style="background:#fd7e14;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🟠 สูง</span>',
+                    'low' => '<span style="background:#20c997;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🟢 ต่ำ</span>',
+                    default => '<span style="background:#4e73df;color:#fff;padding:3px 10px;border-radius:20px;font-size:13px;">🔵 ปานกลาง</span>',
+                };
 
-                    $email_subject = "📋 แจ้งซ่อมใหม่ #$request_id - $title";
-                    $email_body = '<!DOCTYPE html>
+                $email_subject = "📋 แจ้งซ่อมใหม่ #$request_id - $title";
+                $email_body = '<!DOCTYPE html>
 <html lang="th"><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;padding:30px 0;">
@@ -216,6 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
   </table>
 </body></html>';
 
+                if ($staff_result && mysqli_num_rows($staff_result) > 0) {
                     $staff_emails = [];
                     while ($staff = mysqli_fetch_assoc($staff_result)) {
                         if (!empty($staff['email'])) {
@@ -224,6 +224,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     }
                     if (!empty($staff_emails)) {
                         send_email($staff_emails, $email_subject, $email_body);
+                    }
+                }
+
+                // ===== ส่งอีเมลแจ้งเตือน computer_staff เฉพาะหมวดหมู่ คอมพิวเตอร์, เครือข่าย, อื่นๆ =====
+                $computer_notify_categories = ['คอมพิวเตอร์', 'เครือข่าย', 'อื่นๆ'];
+                if (in_array($category['category_name'], $computer_notify_categories)) {
+                    $computer_staff_result = db_select(
+                        "SELECT fullname, email FROM users
+                         WHERE role = 'computer_staff'
+                         AND email IS NOT NULL AND email != ''",
+                        "",
+                        []
+                    );
+                    if ($computer_staff_result && mysqli_num_rows($computer_staff_result) > 0) {
+                        $computer_emails = [];
+                        while ($cs = mysqli_fetch_assoc($computer_staff_result)) {
+                            if (!empty($cs['email'])) {
+                                $computer_emails[] = $cs['email'];
+                            }
+                        }
+                        if (!empty($computer_emails)) {
+                            send_email($computer_emails, $email_subject, $email_body);
+                        }
                     }
                 }
 
@@ -267,7 +290,7 @@ include 'includes/header.php';
             <i class="bx bx-edit me-2"></i>กรอกข้อมูลการแจ้งซ่อม 
         </h6>
         <div class="text-primary small fw-semibold bg-primary bg-opacity-10 px-3 py-2 rounded">
-            <i class="bx bx-error-circle me-1"></i>ประกาศ: ระบบนี้ไม่รองรับการแจ้งซ่อมอินเทอร์เน็ตหรือคอมพิวเตอร์ ณ ขณะนี้ กรุณาติดต่อที่ศูนย์คอมพิวเตอร์ โทร : 50001
+            <i class="bx bx-info-circle me-1"></i>ประกาศ: หมวดหมู่คอมพิวเตอร์ เครือข่าย และอื่นๆ จะแจ้งเตือนไปยังเจ้าหน้าที่ศูนย์คอมพิวเตอร์โดยอัตโนมัติ
         </div>
     </div>
     <div class="card-body">

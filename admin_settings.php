@@ -213,7 +213,7 @@ $broadcast_error = '';
 if (isset($_POST['send_broadcast'])) {
     $bc_subject = trim($_POST['bc_subject'] ?? '');
     $bc_body_raw = trim($_POST['bc_body'] ?? '');
-    $bc_target = $_POST['bc_target'] ?? 'all';   // all | building_staff | electrical_staff | plumbing_staff | ac_staff | maintenance_all | head_building | head_electrical | head_plumbing | head_ac | heads_all | admin | user
+    $bc_target = $_POST['bc_target'] ?? 'all';   // all | building_staff | electrical_staff | plumbing_staff | ac_staff | maintenance_all | head_building | head_electrical | head_plumbing | head_ac | heads_all | computer_staff | admin | user
 
     if (empty($bc_subject) || empty($bc_body_raw)) {
         $broadcast_error = 'กรุณากรอกหัวข้อและเนื้อหาประกาศให้ครบถ้วน';
@@ -230,7 +230,7 @@ if (isset($_POST['send_broadcast'])) {
         } elseif ($bc_target === 'ac_staff') {
             $bc_query = "SELECT fullname, email FROM users WHERE role = 'ac_staff' AND email IS NOT NULL AND email != ''";
         } elseif ($bc_target === 'maintenance_all') {
-            $bc_query = "SELECT fullname, email FROM users WHERE role IN ('building_staff','electrical_staff','plumbing_staff','ac_staff','head_building','head_electrical','head_plumbing','head_ac') AND email IS NOT NULL AND email != ''";
+            $bc_query = "SELECT fullname, email FROM users WHERE role IN ('building_staff','electrical_staff','plumbing_staff','ac_staff','head_building','head_electrical','head_plumbing','head_ac','computer_staff') AND email IS NOT NULL AND email != ''";
         } elseif ($bc_target === 'head_building') {
             $bc_query = "SELECT fullname, email FROM users WHERE role = 'head_building' AND email IS NOT NULL AND email != ''";
         } elseif ($bc_target === 'head_electrical') {
@@ -241,6 +241,8 @@ if (isset($_POST['send_broadcast'])) {
             $bc_query = "SELECT fullname, email FROM users WHERE role = 'head_ac' AND email IS NOT NULL AND email != ''";
         } elseif ($bc_target === 'heads_all') {
             $bc_query = "SELECT fullname, email FROM users WHERE role IN ('head_building','head_electrical','head_plumbing','head_ac') AND email IS NOT NULL AND email != ''";
+        } elseif ($bc_target === 'computer_staff') {
+            $bc_query = "SELECT fullname, email FROM users WHERE role = 'computer_staff' AND email IS NOT NULL AND email != ''";
         } elseif ($bc_target === 'admin') {
             $bc_query = "SELECT fullname, email FROM users WHERE role = 'admin' AND email IS NOT NULL AND email != ''";
         } else {
@@ -818,6 +820,13 @@ include 'includes/header.php';
                                             <i class="bx bx-wind me-1"></i>หัวหน้างานปรับอากาศ
                                         </label>
                                     </div>                   
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="bc_target" id="bc_computer_staff"
+                                            value="computer_staff">
+                                        <label class="form-check-label" for="bc_computer_staff">
+                                            <i class="bx bx-desktop me-1"></i>เจ้าหน้าที่ศูนย์คอมพิวเตอร์
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
 
@@ -863,6 +872,8 @@ include 'includes/header.php';
                                 $cnt_head_ac = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='head_ac' AND email IS NOT NULL AND email != ''"))['c'];
                                 $cnt_heads_all = $cnt_head_building + $cnt_head_electrical + $cnt_head_plumbing + $cnt_head_ac;
                                 $cnt_maintenance = $cnt_staff + $cnt_electrical + $cnt_plumbing + $cnt_ac + $cnt_heads_all;
+                                $cnt_computer = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='computer_staff' AND email IS NOT NULL AND email != ''"))['c'];
+                                $cnt_maintenance_total = $cnt_maintenance + $cnt_computer;
                                 $cnt_admin = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM users WHERE role='admin' AND email IS NOT NULL AND email != ''"))['c'];
                                 ?>
                                 <ul class="list-unstyled mb-0">
@@ -908,10 +919,15 @@ include 'includes/header.php';
                                         <span class="badge me-2" style="background:#374151"><?php echo $cnt_head_ac; ?></span>
                                         หัวหน้างานปรับอากาศ
                                     </li>
+                                    <li class="mb-1 mt-2"><small class="fw-bold text-muted text-uppercase">ศูนย์คอมพิวเตอร์</small></li>
+                                    <li class="mb-2">
+                                        <span class="badge me-2" style="background:#0891b2"><?php echo $cnt_computer; ?></span>
+                                        เจ้าหน้าที่ศูนย์คอมพิวเตอร์
+                                    </li>
                                     <li class="mb-1 mt-2"><small class="fw-bold text-muted text-uppercase">รวม</small></li>
                                     <li class="mb-2">
-                                        <span class="badge bg-primary me-2"><?php echo $cnt_maintenance; ?></span>
-                                        <strong>ฝ่ายซ่อมบำรุงทั้งหมด</strong>
+                                        <span class="badge bg-primary me-2"><?php echo $cnt_maintenance_total; ?></span>
+                                        <strong>ฝ่ายซ่อมบำรุง+ศูนย์คอมพิวเตอร์</strong>
                                     </li>
                                     <li class="mb-2">
                                         <span class="badge bg-warning text-dark me-2"><?php echo $cnt_heads_all; ?></span>

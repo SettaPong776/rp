@@ -242,7 +242,8 @@ function get_all_staff_roles()
 {
     return [
         'building_staff', 'electrical_staff', 'plumbing_staff', 'ac_staff',
-        'head_building', 'head_electrical', 'head_plumbing', 'head_ac'
+        'head_building', 'head_electrical', 'head_plumbing', 'head_ac',
+        'computer_staff'
     ];
 }
 
@@ -254,7 +255,8 @@ function is_staff_role($role)
     return in_array($role, [
         'admin',
         'building_staff', 'electrical_staff', 'plumbing_staff', 'ac_staff',
-        'head_building', 'head_electrical', 'head_plumbing', 'head_ac'
+        'head_building', 'head_electrical', 'head_plumbing', 'head_ac',
+        'computer_staff'
     ]);
 }
 
@@ -266,7 +268,8 @@ function is_admin_role($role)
 {
     return in_array($role, [
         'admin',
-        'head_building', 'head_electrical', 'head_plumbing', 'head_ac'
+        'head_building', 'head_electrical', 'head_plumbing', 'head_ac',
+        'computer_staff'
     ]);
 }
 
@@ -285,6 +288,7 @@ function get_role_label($role)
         'head_electrical'  => 'หัวหน้างานไฟฟ้า',
         'head_plumbing'    => 'หัวหน้างานประปาฯ',
         'head_ac'          => 'หัวหน้างานปรับอากาศ',
+        'computer_staff'   => 'เจ้าหน้าที่ศูนย์คอมพิวเตอร์',
         'user'             => 'ผู้ใช้งานทั่วไป',
     ];
     return $labels[$role] ?? 'ผู้ใช้งาน';
