@@ -88,8 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 // บันทึกประวัติการอัพเดท
                 add_request_history($request_id, $user_id, 'pending', 'สร้างรายการแจ้งซ่อมใหม่');
 
-                // ดึงข้อมูลหมวดหมู่
-                $result = db_select("SELECT category_name FROM categories WHERE category_id = ?", "i", [$category_id]);
+                // ดึงข้อมูลหมวดหมู่ (รวม category_id ด้วยเพื่อใช้เปรียบเทียบ)
+                $result = db_select("SELECT category_id, category_name FROM categories WHERE category_id = ?", "i", [$category_id]);
                 $category = mysqli_fetch_assoc($result);
 
                 // ส่งการแจ้งเตือนไปยัง Telegram
@@ -117,14 +117,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     "\nสถานที่: " . ($location ?: 'ไม่ระบุ') .
                     "\nเวลา: " . thai_date(date('Y-m-d H:i:s')));
 
-                // ===== ส่งอีเมลแจ้งเตือน building_staff + head roles ทุกคน =====
-                $staff_result = db_select(
-                    "SELECT fullname, email FROM users
-                     WHERE role IN ('building_staff','head_building','head_electrical','head_plumbing','head_ac')
-                     AND email IS NOT NULL AND email != ''",
-                    "",
-                    []
-                );
+                // ===== ส่งอีเมลแจ้งเตือนตามหมวดหมู่ =====
+                // กฎ: หมวด คอมพิวเตอร์/เครือข่าย → แจ้ง computer_staff เท่านั้น
+                //      หมวด อื่นๆ → แจ้งทั้ง computer_staff + เจ้าหน้าที่/หัวหน้างานปกติ
+                //      หมวดอื่น → แจ้งเจ้าหน้าที่/หัวหน้างานปกติเท่านั้น
 
                 // สร้างลิงก์ดูรายละเอียด
                 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
@@ -214,22 +210,66 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </td></tr>
   </table>
 </body></html>';
-
-                if ($staff_result && mysqli_num_rows($staff_result) > 0) {
-                    $staff_emails = [];
-                    while ($staff = mysqli_fetch_assoc($staff_result)) {
-                        if (!empty($staff['email'])) {
-                            $staff_emails[] = $staff['email'];
-                        }
-                    }
-                    if (!empty($staff_emails)) {
-                        send_email($staff_emails, $email_subject, $email_body);
+                // ===== กำหนดหมวดหมู่ที่เกี่ยวกับคอมพิวเตอร์/เครือข่าย (ใช้ category_id เพื่อความแม่นยำ) =====
+                // ดึง ID ของหมวดหมู่ที่ชื่อเกี่ยวกับ คอมพิวเตอร์ หรือ เครือข่าย จากฐานข้อมูล
+                $computer_cat_result = db_select(
+                    "SELECT category_id FROM categories
+                     WHERE category_name LIKE '%คอมพิวเตอร์%'
+                        OR category_name LIKE '%เครือข่าย%'
+                        OR category_name LIKE '%อินเตอร์เน็ต%'
+                        OR category_name LIKE '%อินทราเน็ต%'
+                        OR category_name LIKE '%internet%'
+                        OR category_name LIKE '%network%'
+                        OR category_name LIKE '%computer%'",
+                    "", []
+                );
+                $computer_only_ids = [];
+                if ($computer_cat_result) {
+                    while ($row = mysqli_fetch_assoc($computer_cat_result)) {
+                        $computer_only_ids[] = (int)$row['category_id'];
                     }
                 }
 
-                // ===== ส่งอีเมลแจ้งเตือน computer_staff เฉพาะหมวดหมู่ คอมพิวเตอร์, เครือข่าย, อื่นๆ =====
-                $computer_notify_categories = ['คอมพิวเตอร์', 'เครือข่าย', 'อื่นๆ'];
-                if (in_array($category['category_name'], $computer_notify_categories)) {
+                // ดึง ID ของหมวดหมู่ "อื่นๆ"
+                $other_cat_result = db_select(
+                    "SELECT category_id FROM categories WHERE category_name LIKE '%อื่นๆ%' OR category_name LIKE '%อื่น%'",
+                    "", []
+                );
+                $computer_also_ids = [];
+                if ($other_cat_result) {
+                    while ($row = mysqli_fetch_assoc($other_cat_result)) {
+                        $computer_also_ids[] = (int)$row['category_id'];
+                    }
+                }
+
+                $current_cat_id = (int)$category_id;
+                $notify_regular_staff  = !in_array($current_cat_id, $computer_only_ids);
+                $notify_computer_staff = in_array($current_cat_id, $computer_only_ids) || in_array($current_cat_id, $computer_also_ids);
+
+                // ส่งอีเมลให้เจ้าหน้าที่/หัวหน้างานปกติ
+                if ($notify_regular_staff) {
+                    $staff_result = db_select(
+                        "SELECT fullname, email FROM users
+                         WHERE role IN ('building_staff','head_building','head_electrical','head_plumbing','head_ac')
+                         AND email IS NOT NULL AND email != ''",
+                        "",
+                        []
+                    );
+                    if ($staff_result && mysqli_num_rows($staff_result) > 0) {
+                        $staff_emails = [];
+                        while ($staff = mysqli_fetch_assoc($staff_result)) {
+                            if (!empty($staff['email'])) {
+                                $staff_emails[] = $staff['email'];
+                            }
+                        }
+                        if (!empty($staff_emails)) {
+                            send_email($staff_emails, $email_subject, $email_body);
+                        }
+                    }
+                }
+
+                // ส่งอีเมลให้เจ้าหน้าที่ศูนย์คอมพิวเตอร์
+                if ($notify_computer_staff) {
                     $computer_staff_result = db_select(
                         "SELECT fullname, email FROM users
                          WHERE role = 'computer_staff'
@@ -287,10 +327,11 @@ include 'includes/header.php';
 <div class="card shadow mb-4">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h6 class="m-0 fw-bold text-primary">
-            <i class="bx bx-edit me-2"></i>กรอกข้อมูลการแจ้งซ่อม 
+            <i class="bx bx-edit me-2"></i>กรอกข้อมูลการแจ้งซ่อม
         </h6>
         <div class="text-primary small fw-semibold bg-primary bg-opacity-10 px-3 py-2 rounded">
-            <i class="bx bx-info-circle me-1"></i>ประกาศ: หมวดหมู่คอมพิวเตอร์ เครือข่าย และอื่นๆ จะแจ้งเตือนไปยังเจ้าหน้าที่ศูนย์คอมพิวเตอร์โดยอัตโนมัติ
+            <i class="bx bx-info-circle me-1"></i>ประกาศ: หมวดหมู่คอมพิวเตอร์ เครือข่าย และอื่นๆ
+            จะแจ้งเตือนไปยังเจ้าหน้าที่ศูนย์คอมพิวเตอร์โดยอัตโนมัติ
         </div>
     </div>
     <div class="card-body">
@@ -514,11 +555,11 @@ include 'includes/footer.php';
         Swal.fire({
             title: 'กำลังบันทึกข้อมูล...',
             html: '<p class="mb-1">กำลังอัพโหลดรูปและบันทึกรายการ</p>' +
-                  '<p class="text-muted small mb-0">โปรดรอสักครู่ อย่าปิดหน้าต่างงาน</p>',
+                '<p class="text-muted small mb-0">โปรดรอสักครู่ อย่าปิดหน้าต่างงาน</p>',
             allowOutsideClick: false,
             allowEscapeKey: false,
             showConfirmButton: false,
             didOpen: function () { Swal.showLoading(); }
+        });
     });
-});
 </script>
