@@ -174,6 +174,31 @@ if (is_staff_role($_SESSION['role']) && isset($_POST['update_status'])) {
     }
 }
 
+// ตอบกลับแจ้งซ่อม (สำหรับผู้ใช้ทั่วไป)
+if (!is_staff_role($_SESSION['role']) && isset($_POST['reply_request'])) {
+    $reply_message = trim($_POST['reply_message'] ?? '');
+
+    if ($request['user_id'] != $_SESSION['user_id']) {
+        $error = 'คุณไม่มีสิทธิ์ดำเนินการนี้';
+    } elseif (empty($reply_message)) {
+        $error = 'กรุณาระบุข้อความตอบกลับ';
+    } else {
+        $reply_success = insert_request_history($request_id, $_SESSION['user_id'], 'reply', $reply_message, '');
+        if ($reply_success) {
+            $success = 'ส่งข้อความตอบกลับเรียบร้อยแล้ว';
+            if (function_exists('send_telegram_notification')) {
+                send_telegram_notification("<b>มีการตอบกลับจากผู้แจ้งซ่อม</b>\n\nหมายเลข: #" . $request_id .
+                    "\nเรื่อง: " . $request['title'] .
+                    "\nผู้ตอบ: " . $_SESSION['fullname'] .
+                    "\nข้อความ: " . $reply_message .
+                    "\nเวลา: " . thai_date(date('Y-m-d H:i:s')));
+            }
+        } else {
+            $error = 'เกิดข้อผิดพลาดในการส่งข้อความ กรุณาลองใหม่อีกครั้ง';
+        }
+    }
+}
+
 // ยกเลิกคำขอซ่อม (สำหรับผู้ใช้ทั่วไปเจ้าของ request)
 if (!is_staff_role($_SESSION['role']) && isset($_POST['cancel_request'])) {
     $cancel_reason = trim($_POST['cancel_reason'] ?? '');
@@ -275,6 +300,11 @@ include 'includes/header.php';
             <a href="print_request.php?id=<?php echo $request_id; ?>" class="btn btn-danger" target="_blank">
                 <i class="bx bxs-file-pdf me-1"></i>รายงาน PDF
             </a>
+            <?php if (!in_array($request['status'], ['completed', 'rejected'])): ?>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#replyModal">
+                    <i class="bx bx-message-rounded-dots me-1"></i>ตอบกลับ
+                </button>
+            <?php endif; ?>
             <?php if ($request['status'] === 'pending'): ?>
                 <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
                     data-bs-target="#cancelRequestModal">
@@ -540,24 +570,27 @@ include 'includes/header.php';
                                             'pending' => 'warning',
                                             'in_progress' => 'info',
                                             'completed' => 'success',
-                                            'rejected' => 'danger'
+                                            'rejected' => 'danger',
+                                            'reply' => 'primary'
                                         ];
                                         $status_icons = [
                                             'pending' => 'bx-time',
                                             'in_progress' => 'bx-loader',
                                             'completed' => 'bx-check-circle',
-                                            'rejected' => 'bx-x-circle'
+                                            'rejected' => 'bx-x-circle',
+                                            'reply' => 'bx-message-rounded-dots'
                                         ];
                                         $status_texts = [
                                             'pending' => 'รอดำเนินการ',
                                             'in_progress' => 'กำลังดำเนินการ',
                                             'completed' => 'เสร็จสิ้น',
-                                            'rejected' => 'ยกเลิก'
+                                            'rejected' => 'ยกเลิก',
+                                            'reply' => 'ข้อความ'
                                         ];
                                         ?>
-                                        <span class="badge bg-<?php echo $status_classes[$history['status']]; ?> me-2">
-                                            <i class="bx <?php echo $status_icons[$history['status']]; ?>"></i>
-                                            <?php echo $status_texts[$history['status']]; ?>
+                                        <span class="badge bg-<?php echo $status_classes[$history['status']] ?? 'secondary'; ?> me-2">
+                                            <i class="bx <?php echo $status_icons[$history['status']] ?? 'bx-info-circle'; ?>"></i>
+                                            <?php echo $status_texts[$history['status']] ?? 'ข้อความ'; ?>
                                         </span>
                                         <span>โดย <?php echo htmlspecialchars($history['fullname']); ?></span>
                                     </div>
@@ -838,6 +871,40 @@ include 'includes/header.php';
         </div>
     <?php endif; ?>
 
+    <?php if (!is_staff_role($_SESSION['role']) && $request['user_id'] == $_SESSION['user_id']): ?>
+        <!-- ====== Reply Modal ====== -->
+        <div class="modal fade" id="replyModal" tabindex="-1" aria-labelledby="replyModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="replyModalLabel">
+                            <i class="bx bx-message-rounded-dots me-2"></i>ตอบกลับแจ้งซ่อม
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form method="POST" action="view_request.php?id=<?php echo $request_id; ?>">
+                        <div class="modal-body p-4">
+                            <div class="mb-3">
+                                <label for="reply_message" class="form-label fw-semibold">
+                                    ข้อความตอบกลับ <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control" id="reply_message" name="reply_message" rows="4" required placeholder="พิมพ์ข้อความตอบกลับถึงเจ้าหน้าที่..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bx bx-x me-1"></i>ปิด
+                            </button>
+                            <button type="submit" name="reply_request" class="btn btn-primary">
+                                <i class="bx bx-send me-1"></i>ส่งข้อความ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <?php
     // แสดงส่วน footer
     include 'includes/footer.php';
@@ -872,6 +939,21 @@ document.addEventListener('DOMContentLoaded', function () {
         cancelForm.addEventListener('submit', function () {
             Swal.fire({
                 title: 'กำลังยกเลิกคำขอ...',
+                html: '<p class="text-muted small mb-0">โปรดรอสักครู่</p>',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: function () { Swal.showLoading(); }
+            });
+        });
+    }
+
+    // ===== Loading เมื่อ submit ตอบกลับ =====
+    const replyForm = document.querySelector('#replyModal form');
+    if (replyForm) {
+        replyForm.addEventListener('submit', function () {
+            Swal.fire({
+                title: 'กำลังส่งข้อความ...',
                 html: '<p class="text-muted small mb-0">โปรดรอสักครู่</p>',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
