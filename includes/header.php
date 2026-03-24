@@ -84,6 +84,8 @@ $current_page = basename($_SERVER['PHP_SELF']);
             z-index: 1000;
             transition: all 0.3s;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
         }
 
         .sidebar.collapsed {
@@ -119,6 +121,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         .sidebar .menu {
             padding: 20px 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
         }
 
         .sidebar .menu-item {
@@ -595,6 +601,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
                     <span>สมัครสมาชิก</span>
                 </a>
             <?php endif; ?>
+            
+                <a href="คู่มือการใช้งาน ระบบแจ้งซ่อมออนโลน์.pdf" target="_blank" class="menu-item" style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <i class="bx bx-book-open"></i>
+                    <span style="white-space: normal; line-height: 1.4; font-size: 0.9em;">คู่มือการใช้งานเบื้องต้น<br>(ผู้ใช้งานทั่วไป)</span>
+                </a>
         </div>
     </div>
 
