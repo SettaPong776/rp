@@ -276,7 +276,7 @@ include 'includes/header.php';
     <div>
 
         <?php if (is_staff_role($_SESSION['role'])): ?>
-            <a href="admin_requests.php" class="btn btn-secondary">
+            <a href="<?php echo htmlspecialchars($_SESSION['admin_requests_url'] ?? 'admin_requests.php'); ?>" class="btn btn-secondary">
                 <i class="bx bx-arrow-back me-1"></i>กลับ
             </a>
             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#updateStatusModal">
@@ -286,7 +286,7 @@ include 'includes/header.php';
                 <i class="bx bxs-file-pdf me-1"></i>รายงาน PDF
             </a>
         <?php else: ?>
-            <a href="my_requests.php" class="btn btn-secondary">
+            <a href="<?php echo htmlspecialchars($_SESSION['my_requests_url'] ?? 'my_requests.php'); ?>" class="btn btn-secondary">
                 <i class="bx bx-arrow-back me-1"></i>กลับ
             </a>
             <a href="print_request.php?id=<?php echo $request_id; ?>" class="btn btn-danger" target="_blank">

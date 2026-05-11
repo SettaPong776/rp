@@ -11,6 +11,9 @@ if (!isset($_SESSION['user_id']) || !is_staff_role($_SESSION['role'])) {
     exit();
 }
 
+// บันทึก URL ปัจจุบัน (รวมตัวกรอง) ไว้ใน Session เพื่อให้ปุ่มกลับในหน้ารายละเอียดกลับมาที่หน้านี้พร้อมตัวกรองเดิม
+$_SESSION['admin_requests_url'] = $_SERVER['REQUEST_URI'];
+
 // อัพเดตสถานะรายการแจ้งซ่อม
 if (isset($_POST['update_status'])) {
     $request_id = intval($_POST['request_id']);

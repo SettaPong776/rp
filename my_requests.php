@@ -17,6 +17,9 @@ if (is_staff_role($_SESSION['role'])) {
     exit();
 }
 
+// บันทึก URL ปัจจุบัน (รวมตัวกรอง) ไว้ใน Session เพื่อให้ปุ่มกลับในหน้ารายละเอียดกลับมาที่หน้านี้พร้อมตัวกรองเดิม
+$_SESSION['my_requests_url'] = $_SERVER['REQUEST_URI'];
+
 // ตัวแปรสำหรับกรองข้อมูล
 $status_filter = isset($_GET['status']) ? clean_input($_GET['status']) : '';
 $category_filter = isset($_GET['category_id']) ? clean_input($_GET['category_id']) : '';
