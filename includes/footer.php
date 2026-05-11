@@ -99,7 +99,8 @@
             "responsive": true,
             "pageLength": 10,
             "scrollX": true,
-            "autoWidth": false
+            "autoWidth": false,
+            "stateSave": true
         });
     }
 

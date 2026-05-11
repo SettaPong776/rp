@@ -46,6 +46,15 @@ if (!$result || mysqli_num_rows($result) == 0) {
 
 $request = mysqli_fetch_assoc($result);
 
+if (isset($_SESSION['success_msg'])) {
+    $success = $_SESSION['success_msg'];
+    unset($_SESSION['success_msg']);
+}
+if (isset($_SESSION['error_msg'])) {
+    $error = $_SESSION['error_msg'];
+    unset($_SESSION['error_msg']);
+}
+
 // ตรวจสอบสิทธิ์การเข้าถึง
 if (!is_staff_role($_SESSION['role']) && $request['user_id'] != $_SESSION['user_id']) {
     header('Location: dashboard.php');
@@ -156,19 +165,9 @@ if (is_staff_role($_SESSION['role']) && isset($_POST['update_status'])) {
             );
         }
 
-        $success = 'อัพเดตสถานะรายการแจ้งซ่อมเรียบร้อยแล้ว';
-
-        // ดึงข้อมูลรายการแจ้งซ่อมอีกครั้งเพื่ออัพเดตข้อมูลที่แสดง
-        $result = db_select(
-            "SELECT r.*, c.category_name, u.fullname as requester_name, u.email as requester_email, u.department as requester_department, u.phone as requester_phone 
-             FROM repair_requests r 
-             JOIN categories c ON r.category_id = c.category_id 
-             JOIN users u ON r.user_id = u.user_id 
-             WHERE r.request_id = ?",
-            "i",
-            [$request_id]
-        );
-        $request = mysqli_fetch_assoc($result);
+        $_SESSION['success_msg'] = 'อัพเดตสถานะรายการแจ้งซ่อมเรียบร้อยแล้ว';
+        header("Location: view_request.php?id=" . $request_id);
+        exit();
     } else {
         $error = 'เกิดข้อผิดพลาดในการอัพเดตสถานะ';
     }
@@ -185,7 +184,6 @@ if (!is_staff_role($_SESSION['role']) && isset($_POST['reply_request'])) {
     } else {
         $reply_success = insert_request_history($request_id, $_SESSION['user_id'], 'reply', $reply_message, '');
         if ($reply_success) {
-            $success = 'ส่งข้อความตอบกลับเรียบร้อยแล้ว';
             if (function_exists('send_telegram_notification')) {
                 send_telegram_notification("<b>มีการตอบกลับจากผู้แจ้งซ่อม</b>\n\nหมายเลข: #" . $request_id .
                     "\nเรื่อง: " . $request['title'] .
@@ -193,6 +191,9 @@ if (!is_staff_role($_SESSION['role']) && isset($_POST['reply_request'])) {
                     "\nข้อความ: " . $reply_message .
                     "\nเวลา: " . thai_date(date('Y-m-d H:i:s')));
             }
+            $_SESSION['success_msg'] = 'ส่งข้อความตอบกลับเรียบร้อยแล้ว';
+            header("Location: view_request.php?id=" . $request_id);
+            exit();
         } else {
             $error = 'เกิดข้อผิดพลาดในการส่งข้อความ กรุณาลองใหม่อีกครั้ง';
         }
@@ -218,18 +219,9 @@ if (!is_staff_role($_SESSION['role']) && isset($_POST['cancel_request'])) {
         );
         if ($cancel_success) {
             insert_request_history($request_id, $_SESSION['user_id'], 'rejected', $remark, '');
-            $success = 'ยกเลิกคำขอซ่อมเรียบร้อยแล้ว';
-            $result = db_select(
-                "SELECT r.*, c.category_name, u.fullname as requester_name, u.email as requester_email,
-                        u.department as requester_department, u.phone as requester_phone
-                 FROM repair_requests r
-                 JOIN categories c ON r.category_id = c.category_id
-                 JOIN users u ON r.user_id = u.user_id
-                 WHERE r.request_id = ?",
-                "i",
-                [$request_id]
-            );
-            $request = mysqli_fetch_assoc($result);
+            $_SESSION['success_msg'] = 'ยกเลิกคำขอซ่อมเรียบร้อยแล้ว';
+            header("Location: view_request.php?id=" . $request_id);
+            exit();
         } else {
             $error = 'เกิดข้อผิดพลาดในการยกเลิกคำขอ กรุณาลองใหม่อีกครั้ง';
         }
@@ -918,7 +910,19 @@ document.addEventListener('DOMContentLoaded', function () {
     // ===== Loading เมื่อ submit อัปเดตสถานะ =====
     const updateForm = document.querySelector('#updateStatusModal form');
     if (updateForm) {
-        updateForm.addEventListener('submit', function () {
+        updateForm.addEventListener('submit', function (e) {
+            if (this.dataset.submitted) {
+                e.preventDefault();
+                return;
+            }
+            this.dataset.submitted = 'true';
+            
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>กำลังดำเนินการ...';
+                btn.classList.add('disabled');
+            }
+
             const statusEl  = document.getElementById('new_status');
             const statusTxt = statusEl ? statusEl.options[statusEl.selectedIndex].text : '';
             Swal.fire({
@@ -936,7 +940,19 @@ document.addEventListener('DOMContentLoaded', function () {
     // ===== Loading เมื่อ submit ยกเลิกคำขอ =====
     const cancelForm = document.querySelector('#cancelRequestModal form');
     if (cancelForm) {
-        cancelForm.addEventListener('submit', function () {
+        cancelForm.addEventListener('submit', function (e) {
+            if (this.dataset.submitted) {
+                e.preventDefault();
+                return;
+            }
+            this.dataset.submitted = 'true';
+            
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>กำลังดำเนินการ...';
+                btn.classList.add('disabled');
+            }
+
             Swal.fire({
                 title: 'กำลังยกเลิกคำขอ...',
                 html: '<p class="text-muted small mb-0">โปรดรอสักครู่</p>',
@@ -951,7 +967,19 @@ document.addEventListener('DOMContentLoaded', function () {
     // ===== Loading เมื่อ submit ตอบกลับ =====
     const replyForm = document.querySelector('#replyModal form');
     if (replyForm) {
-        replyForm.addEventListener('submit', function () {
+        replyForm.addEventListener('submit', function (e) {
+            if (this.dataset.submitted) {
+                e.preventDefault();
+                return;
+            }
+            this.dataset.submitted = 'true';
+            
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>กำลังส่ง...';
+                btn.classList.add('disabled');
+            }
+
             Swal.fire({
                 title: 'กำลังส่งข้อความ...',
                 html: '<p class="text-muted small mb-0">โปรดรอสักครู่</p>',
