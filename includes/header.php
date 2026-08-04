@@ -53,8 +53,30 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <!-- Datatables CSS -->
     <link href="https://cdn.datatables.net/1.13.1/css/dataTables.bootstrap5.min.css" rel="stylesheet">
 
+    <!-- Select2 CSS & Bootstrap 5 Theme -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+
     <!-- Custom CSS -->
     <style>
+        /* Select2 Bootstrap 5 Integration */
+        .select2-container--bootstrap-5 .select2-selection {
+            font-family: 'Prompt', sans-serif !important;
+            min-height: 38px !important;
+            border-color: #dee2e6 !important;
+        }
+        .input-group > .select2-container--bootstrap-5 {
+            flex: 1 1 auto;
+            width: 1% !important;
+        }
+        .input-group > .select2-container--bootstrap-5 .select2-selection {
+            border-top-left-radius: 0 !important;
+            border-bottom-left-radius: 0 !important;
+        }
+        .select2-search__field {
+            font-family: 'Prompt', sans-serif !important;
+        }
+
         :root {
             --primary-color: #6563ff;
             --primary-dark: #5452d8;

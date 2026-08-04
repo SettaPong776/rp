@@ -16,6 +16,8 @@ $start_date = isset($_GET['start_date']) ? clean_input($_GET['start_date']) : da
 $end_date = isset($_GET['end_date']) ? clean_input($_GET['end_date']) : date('Y-m-d'); // วันปัจจุบัน
 $category_id = isset($_GET['category_id']) ? clean_input($_GET['category_id']) : '';
 $status = isset($_GET['status']) ? clean_input($_GET['status']) : '';
+$building_filter = isset($_GET['building']) ? clean_input($_GET['building']) : '';
+$department_filter = isset($_GET['department']) ? clean_input($_GET['department']) : '';
 
 // สร้างรายงาน Excel
 if (isset($_POST['export_excel'])) {
@@ -35,6 +37,14 @@ if (isset($_POST['export_excel'])) {
 
     if (!empty($status)) {
         $where_conditions[] = "r.status = '$status'";
+    }
+
+    if (!empty($building_filter)) {
+        $where_conditions[] = "r.location LIKE '%" . mysqli_real_escape_string($conn, $building_filter) . "%'";
+    }
+
+    if (!empty($department_filter)) {
+        $where_conditions[] = "r.location LIKE '%" . mysqli_real_escape_string($conn, $department_filter) . "%'";
     }
 
     $where_clause = implode(' AND ', $where_conditions);
@@ -206,6 +216,26 @@ $completion_stats = mysqli_fetch_assoc($result);
 $query = "SELECT * FROM categories ORDER BY category_name";
 $categories = mysqli_query($conn, $query);
 
+// ดึงข้อมูลอาคารและหน่วยงานสำหรับตัวกรอง
+$bld_query = mysqli_query($conn, "SELECT * FROM buildings ORDER BY sort_order ASC, id ASC");
+$buildings_list = [];
+if ($bld_query) {
+    while ($b = mysqli_fetch_assoc($bld_query)) {
+        $buildings_list[] = $b['name'];
+    }
+}
+
+$dept_query = mysqli_query($conn, "SELECT * FROM departments ORDER BY sort_order ASC, name ASC");
+$departments_list = [];
+if ($dept_query) {
+    while ($d = mysqli_fetch_assoc($dept_query)) {
+        $departments_list[] = $d['name'];
+    }
+}
+if (!in_array('อื่นๆ', $departments_list) && !in_array('หน่วยงานอื่นๆ', $departments_list)) {
+    $departments_list[] = 'อื่นๆ';
+}
+
 // ดึงข้อมูลรายละเอียดรายการแจ้งซ่อม
 $query = "SELECT r.*, c.category_name, u.fullname as requester_name, u.department 
           FROM repair_requests r 
@@ -219,6 +249,14 @@ if (!empty($category_id)) {
 
 if (!empty($status)) {
     $query .= " AND r.status = '$status'";
+}
+
+if (!empty($building_filter)) {
+    $query .= " AND r.location LIKE '%" . mysqli_real_escape_string($conn, $building_filter) . "%'";
+}
+
+if (!empty($department_filter)) {
+    $query .= " AND r.location LIKE '%" . mysqli_real_escape_string($conn, $department_filter) . "%'";
 }
 
 $query .= " ORDER BY r.created_at DESC";
@@ -272,55 +310,78 @@ include 'includes/header.php';
 
 <!-- ส่วนกรองข้อมูล -->
 <div class="card shadow mb-4">
-    <div class="card-header bg-white py-3">
-        <h6 class="m-0 fw-bold text-primary">
-            <i class="bx bx-filter-alt me-2"></i>ตัวกรองข้อมูล
-        </h6>
-    </div>
-    <div class="card-body">
-        <form method="GET" class="row g-3">
-            <div class="col-md-3">
-                <label for="start_date" class="form-label">วันที่เริ่มต้น</label>
-                <input type="date" class="form-control" id="start_date" name="start_date"
-                    value="<?php echo $start_date; ?>">
-            </div>
-            <div class="col-md-3">
-                <label for="end_date" class="form-label">วันที่สิ้นสุด</label>
-                <input type="date" class="form-control" id="end_date" name="end_date" value="<?php echo $end_date; ?>">
-            </div>
-            <div class="col-md-3">
-                <label for="category_id" class="form-label">หมวดหมู่</label>
-                <select class="form-select" id="category_id" name="category_id">
-                    <option value="">ทั้งหมด</option>
-                    <?php mysqli_data_seek($categories, 0); ?>
-                    <?php while ($category = mysqli_fetch_assoc($categories)): ?>
-                        <option value="<?php echo $category['category_id']; ?>" <?php echo $category_id == $category['category_id'] ? 'selected' : ''; ?>>
-                            <?php echo $category['category_name']; ?>
-                        </option>
-                    <?php endwhile; ?>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="status" class="form-label">สถานะ</label>
-                <select class="form-select" id="status" name="status">
-                    <option value="">ทั้งหมด</option>
-                    <option value="pending" <?php echo $status == 'pending' ? 'selected' : ''; ?>>รอดำเนินการ</option>
-                    <option value="in_progress" <?php echo $status == 'in_progress' ? 'selected' : ''; ?>>กำลังดำเนินการ
-                    </option>
-                    <option value="completed" <?php echo $status == 'completed' ? 'selected' : ''; ?>>เสร็จสิ้น</option>
-                    <option value="rejected" <?php echo $status == 'rejected' ? 'selected' : ''; ?>>ยกเลิก</option>
-                </select>
-            </div>
-            <div class="col-12 d-flex justify-content-end">
-                <button type="submit" class="btn btn-primary me-2">
+    <form method="GET">
+        <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary">
+                <i class="bx bx-filter-alt me-2"></i>ตัวกรองข้อมูล
+            </h6>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm">
                     <i class="bx bx-filter me-1"></i>กรองข้อมูล
                 </button>
-                <a href="admin_reports.php" class="btn btn-outline-secondary">
+                <a href="admin_reports.php" class="btn btn-outline-secondary btn-sm">
                     <i class="bx bx-reset me-1"></i>ล้างตัวกรอง
                 </a>
             </div>
-        </form>
-    </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label for="start_date" class="form-label">วันที่เริ่มต้น</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date"
+                        value="<?php echo $start_date; ?>">
+                </div>
+                <div class="col-md-2">
+                    <label for="end_date" class="form-label">วันที่สิ้นสุด</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" value="<?php echo $end_date; ?>">
+                </div>
+                <div class="col-md-3">
+                    <label for="building" class="form-label">อาคาร/เลขอาคาร</label>
+                    <select class="form-select select2" id="building" name="building">
+                        <option value="">ทั้งหมด</option>
+                        <?php foreach ($buildings_list as $bld): ?>
+                            <option value="<?php echo htmlspecialchars($bld); ?>" <?php echo $building_filter == $bld ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($bld); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="department" class="form-label">คณะ/หน่วยงาน</label>
+                    <select class="form-select select2" id="department" name="department">
+                        <option value="">ทั้งหมด</option>
+                        <?php foreach ($departments_list as $dept): ?>
+                            <option value="<?php echo htmlspecialchars($dept); ?>" <?php echo $department_filter == $dept ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($dept); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="category_id" class="form-label">หมวดหมู่</label>
+                    <select class="form-select" id="category_id" name="category_id">
+                        <option value="">ทั้งหมด</option>
+                        <?php mysqli_data_seek($categories, 0); ?>
+                        <?php while ($category = mysqli_fetch_assoc($categories)): ?>
+                            <option value="<?php echo $category['category_id']; ?>" <?php echo $category_id == $category['category_id'] ? 'selected' : ''; ?>>
+                                <?php echo $category['category_name']; ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">สถานะ</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">ทั้งหมด</option>
+                        <option value="pending" <?php echo $status == 'pending' ? 'selected' : ''; ?>>รอดำเนินการ</option>
+                        <option value="in_progress" <?php echo $status == 'in_progress' ? 'selected' : ''; ?>>กำลังดำเนินการ</option>
+                        <option value="completed" <?php echo $status == 'completed' ? 'selected' : ''; ?>>เสร็จสิ้น</option>
+                        <option value="rejected" <?php echo $status == 'rejected' ? 'selected' : ''; ?>>ยกเลิก</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
 
 <!-- สรุปสถิติ -->

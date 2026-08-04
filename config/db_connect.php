@@ -19,6 +19,82 @@ if (!$conn) {
 // ตั้งค่า charset เป็น utf8
 mysqli_set_charset($conn, "utf8mb4");
 
+// Auto-check และเพิ่มคอลัมน์ asset_number ในตาราง repair_requests ถ้ายังไม่มี
+$check_asset_col = @mysqli_query($conn, "SHOW COLUMNS FROM `repair_requests` LIKE 'asset_number'");
+if ($check_asset_col && mysqli_num_rows($check_asset_col) == 0) {
+    @mysqli_query($conn, "ALTER TABLE `repair_requests` ADD COLUMN `asset_number` VARCHAR(100) DEFAULT NULL AFTER `location`");
+}
+
+// Auto-create ตาราง buildings ถ้ายังไม่มี
+@mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `buildings` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(191) NOT NULL,
+    `sort_order` INT(11) NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_building_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// ใส่ข้อมูลอาคารเริ่มต้นหากตารางว่างอยู่
+$check_bld_cnt = @mysqli_query($conn, "SELECT COUNT(*) as cnt FROM buildings");
+if ($check_bld_cnt) {
+    $bld_cnt_row = mysqli_fetch_assoc($check_bld_cnt);
+    if (($bld_cnt_row['cnt'] ?? 0) == 0) {
+        $default_buildings = [
+            'อาคารคณะวิทยาการจัดการ', 'อาคารหอประชุมขุมทองวิไล', 'อาคารศูนย์วิทยาศาสตร์', 'อาคารพลศึกษา',
+            'อาคารเกษตร', 'อาคารเทคโนโลยีอุตสาหกรรม (หลังเก่า)', 'อาคารหอพักกัลปพฤกษ์', 'อาคารหอพักภูกระดึง',
+            'อาคารหอพักอินทนิล', 'อาคารหอพักดอกคูณ', 'อาคารหอพักหางนกยูง', 'อาคารหอพักภูหลวง',
+            'อาคารหอพักภูเรือ', 'อาคารหอพักภูหอ', 'อาคารศูนย์ภาษาและคอมพิวเตอร์', 'อาคารวิทยาศาสตร์เทคโนโลยีอาหาร',
+            'อาคารสำนักงานบัณฑิตศึกษา', 'อาคารโรงเรียนสาธิต 3 หลัง', 'อาคารคณะเทคโนโลยีอุตสาหกรรม', 'อาคารศิลปกรรม',
+            'อาคารภูคำ', 'อาคารศูนย์วัฒนธรรม', 'อาคารสำนักงานวิทยบริการ', 'อาคารวิชญาการ',
+            'อาคารคณะมนุษยศาสตร์และสังคมศาสตร์ (อาคาร 1)', 'อาคารคณะครุศาสตร์ (อาคาร 2)',
+            'อาคารคณะวิทยาศาสตร์และเทคโนโลยี (อาคาร 3)', 'อาคารตึกแฉก (อาคาร 4)', 'อาคารอาหารและโภชนาการ (อาคาร 9)',
+            'อาคารเรียนรวม 8 ชั้น (อาคาร 18)', 'อาคารปฏิบัติการสหวิทยาการเฉลิมพระเกียรติ 80 พรรษา (อาคาร 19)',
+            'อาคารสหวิทยาการสารสนเทศ (อาคาร 20)', 'อาคารที่พักอาจารย์ (อาคาร 21)', 'อาคารศูนย์ข้อมูลสารสนเทศ (อาคาร 22)',
+            'อาคารเรียนรวมเอนกประสงค์ (อาคาร 23)', 'อาคารสำนักวิทยบริการและเทคโนโลยีสารสนเทศ (อาคาร 24)',
+            'อาคารกีฬาในร่ม (อาคาร 25)', 'อาคารอัฒจันทร์ สนามกีฬาร่วมใจ (อาคาร 26)', 'อาคารกีฬาทางน้ำ (อาคาร 27)',
+            'อาคารเรียนวิทยาศาสตร์และห้องปฏิบัติการ (อาคาร 28)', 'อาคารโรงเรียนสาธิต (อาคาร 29)',
+            'อาคารที่พักนักศึกษา (อาคาร 30)', 'อาคารที่พักบุคลากร (อาคาร 31)', 'อาคารปฏิบัติการทางการเกษตร (อาคาร 32)',
+            'สถานที่อื่นๆ'
+        ];
+        foreach ($default_buildings as $i => $bname) {
+            $bname_esc = mysqli_real_escape_string($conn, $bname);
+            $order = $i + 1;
+            @mysqli_query($conn, "INSERT IGNORE INTO buildings (name, sort_order) VALUES ('$bname_esc', $order)");
+        }
+    }
+}
+
+// Auto-create ตาราง departments ถ้ายังไม่มี
+@mysqli_query($conn, "CREATE TABLE IF NOT EXISTS `departments` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(255) NOT NULL,
+    `sort_order` INT(11) NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// ใส่ข้อมูลหน่วยงานเริ่มต้นหากตารางว่างอยู่
+$check_dept_cnt = @mysqli_query($conn, "SELECT COUNT(*) as cnt FROM departments");
+if ($check_dept_cnt) {
+    $dept_cnt_row = mysqli_fetch_assoc($check_dept_cnt);
+    if (($dept_cnt_row['cnt'] ?? 0) == 0) {
+        $default_depts = [
+            'สำนักส่งเสริมวิชาการและงานทะเบียน', 'สถาบันวิจัยและพัฒนา', 'สำนักศิลปะและวัฒนธรรม',
+            'สำนักวิทยบริการและเทคโนโลยีสารสนเทศ', 'สำนักงานอธิการบดี กองกลาง', 'สำนักงานอธิการบดี กองนโยบายและแผน',
+            'สำนักงานอธิการบดี กองพัฒนานักศึกษา', 'คณะครุศาสตร์', 'คณะมนุษยศาสตร์และสังคมศาสตร์',
+            'คณะวิทยาการจัดการ', 'คณะวิทยาศาสตร์และเทคโนโลยี', 'คณะเทคโนโลยีอุตสาหกรรม',
+            'โรงเรียนสาธิตมหาวิทยาลัยราชภัฏเลย'
+        ];
+        foreach ($default_depts as $i => $dname) {
+            $dname_esc = mysqli_real_escape_string($conn, $dname);
+            $order = $i + 1;
+            @mysqli_query($conn, "INSERT IGNORE INTO departments (name, sort_order) VALUES ('$dname_esc', $order)");
+        }
+    }
+}
+
+
 // ฟังก์ชันสำหรับการแปลงวันที่เป็นรูปแบบไทย
 function thai_date($datetime, $format = 'j F Y เวลา H:i น.')
 {

@@ -222,7 +222,7 @@ include 'includes/header.php';
                             <th>เรื่อง</th>
                             <th>หมวดหมู่</th>
                             <th>สถานะ</th>
-                            <th>ความสำคัญ</th>
+
                             <th>จัดการ</th>
                         </tr>
                     </thead>
@@ -244,17 +244,7 @@ include 'includes/header.php';
                                     echo $status_badges[$request['status']];
                                     ?>
                                 </td>
-                                <td>
-                                    <?php
-                                    $priority_badges = [
-                                        'low' => '<span class="badge bg-success">ต่ำ</span>',
-                                        'medium' => '<span class="badge bg-warning text-dark">ปานกลาง</span>',
-                                        'high' => '<span class="badge bg-danger">สูง</span>',
-                                        'urgent' => '<span class="badge bg-danger"><i class="bx bx-error-circle me-1"></i>เร่งด่วน</span>'
-                                    ];
-                                    echo $priority_badges[$request['priority']];
-                                    ?>
-                                </td>
+
                                 <td>
                                     <a href="view_request.php?id=<?php echo $request['request_id']; ?>"
                                         class="btn btn-sm btn-primary">

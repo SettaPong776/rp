@@ -14,8 +14,26 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <!-- Custom JavaScript -->
 <script>
+    // Initialize Select2 dropdowns
+    $(document).ready(function() {
+        if ($.fn.select2) {
+            $('.select2').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                language: {
+                    noResults: function () {
+                        return "ไม่พบข้อมูลที่ค้นหา";
+                    }
+                }
+            });
+        }
+    });
+
     // Toggle Sidebar (Desktop)
     document.getElementById('sidebarToggle').addEventListener('click', function () {
         const sidebar = document.getElementById('sidebar');

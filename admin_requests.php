@@ -103,6 +103,8 @@ if (isset($_POST['update_status'])) {
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
 $category_filter = isset($_GET['category']) ? intval($_GET['category']) : 0;
 $date_filter = isset($_GET['date']) ? trim($_GET['date']) : '';
+$building_filter = isset($_GET['building']) ? trim($_GET['building']) : '';
+$department_filter = isset($_GET['department']) ? trim($_GET['department']) : '';
 
 // สร้าง query ด้วย prepared statement
 $query = "SELECT r.*, c.category_name, u.fullname as requester_name 
@@ -131,11 +133,43 @@ if ($date_filter) {
     $params[] = $date_filter;
 }
 
+if ($building_filter) {
+    $query .= " AND r.location LIKE ?";
+    $types .= "s";
+    $params[] = '%' . $building_filter . '%';
+}
+
+if ($department_filter) {
+    $query .= " AND r.location LIKE ?";
+    $types .= "s";
+    $params[] = '%' . $department_filter . '%';
+}
+
 $query .= " ORDER BY r.created_at DESC";
 $requests = db_select($query, $types, $params);
 
 // ดึงข้อมูลหมวดหมู่
 $categories = db_select("SELECT * FROM categories ORDER BY category_name");
+
+// ดึงข้อมูลอาคารและหน่วยงานสำหรับตัวกรอง
+$bld_query = mysqli_query($conn, "SELECT * FROM buildings ORDER BY sort_order ASC, id ASC");
+$buildings_list = [];
+if ($bld_query) {
+    while ($b = mysqli_fetch_assoc($bld_query)) {
+        $buildings_list[] = $b['name'];
+    }
+}
+
+$dept_query = mysqli_query($conn, "SELECT * FROM departments ORDER BY sort_order ASC, name ASC");
+$departments_list = [];
+if ($dept_query) {
+    while ($d = mysqli_fetch_assoc($dept_query)) {
+        $departments_list[] = $d['name'];
+    }
+}
+if (!in_array('อื่นๆ', $departments_list) && !in_array('หน่วยงานอื่นๆ', $departments_list)) {
+    $departments_list[] = 'อื่นๆ';
+}
 
 // แสดงหน้าเว็บ
 include 'includes/header.php';
@@ -168,53 +202,72 @@ include 'includes/header.php';
 
 <!-- ส่วนกรองข้อมูล -->
 <div class="card shadow mb-4">
-    <div class="card-header bg-white py-3">
-        <h6 class="m-0 fw-bold text-primary">
-            <i class="bx bx-filter-alt me-2"></i>ตัวกรองข้อมูล
-        </h6>
-    </div>
-    <div class="card-body">
-        <form method="GET" class="row g-3">
-            <div class="col-md-3">
-                <label for="status" class="form-label">สถานะ</label>
-                <select class="form-select" id="status" name="status">
-                    <option value="">ทั้งหมด</option>
-                    <option value="pending" <?php echo $status_filter == 'pending' ? 'selected' : ''; ?>>รอดำเนินการ
-                    </option>
-                    <option value="in_progress" <?php echo $status_filter == 'in_progress' ? 'selected' : ''; ?>>
-                        กำลังดำเนินการ</option>
-                    <option value="completed" <?php echo $status_filter == 'completed' ? 'selected' : ''; ?>>เสร็จสิ้น
-                    </option>
-                    <option value="rejected" <?php echo $status_filter == 'rejected' ? 'selected' : ''; ?>>ยกเลิก</option>
-                </select>
+    <form method="GET">
+        <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary">
+                <i class="bx bx-filter-alt me-2"></i>ตัวกรองข้อมูล
+            </h6>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bx bx-filter me-1"></i>กรองข้อมูล
+                </button>
+                <a href="admin_requests.php" class="btn btn-outline-secondary btn-sm">
+                    <i class="bx bx-reset me-1"></i>ล้างตัวกรอง
+                </a>
             </div>
-            <div class="col-md-3">
-                <label for="category" class="form-label">หมวดหมู่</label>
-                <select class="form-select" id="category" name="category">
-                    <option value="">ทั้งหมด</option>
-                    <?php while ($category = mysqli_fetch_assoc($categories)): ?>
-                        <option value="<?php echo $category['category_id']; ?>" <?php echo $category_filter == $category['category_id'] ? 'selected' : ''; ?>>
-                            <?php echo $category['category_name']; ?>
-                        </option>
-                    <?php endwhile; ?>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="date" class="form-label">วันที่แจ้ง</label>
-                <input type="date" class="form-control" id="date" name="date" value="<?php echo $date_filter; ?>">
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <div class="d-grid gap-2 w-100">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bx bx-filter me-1"></i>กรองข้อมูล
-                    </button>
-                    <a href="admin_requests.php" class="btn btn-outline-secondary">
-                        <i class="bx bx-reset me-1"></i>ล้างตัวกรอง
-                    </a>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label for="building" class="form-label">อาคาร/เลขอาคาร</label>
+                    <select class="form-select select2" id="building" name="building">
+                        <option value="">ทั้งหมด</option>
+                        <?php foreach ($buildings_list as $bld): ?>
+                            <option value="<?php echo htmlspecialchars($bld); ?>" <?php echo $building_filter == $bld ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($bld); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="department" class="form-label">คณะ/หน่วยงาน</label>
+                    <select class="form-select select2" id="department" name="department">
+                        <option value="">ทั้งหมด</option>
+                        <?php foreach ($departments_list as $dept): ?>
+                            <option value="<?php echo htmlspecialchars($dept); ?>" <?php echo $department_filter == $dept ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($dept); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="category" class="form-label">หมวดหมู่</label>
+                    <select class="form-select" id="category" name="category">
+                        <option value="">ทั้งหมด</option>
+                        <?php while ($category = mysqli_fetch_assoc($categories)): ?>
+                            <option value="<?php echo $category['category_id']; ?>" <?php echo $category_filter == $category['category_id'] ? 'selected' : ''; ?>>
+                                <?php echo $category['category_name']; ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">สถานะ</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">ทั้งหมด</option>
+                        <option value="pending" <?php echo $status_filter == 'pending' ? 'selected' : ''; ?>>รอดำเนินการ</option>
+                        <option value="in_progress" <?php echo $status_filter == 'in_progress' ? 'selected' : ''; ?>>กำลังดำเนินการ</option>
+                        <option value="completed" <?php echo $status_filter == 'completed' ? 'selected' : ''; ?>>เสร็จสิ้น</option>
+                        <option value="rejected" <?php echo $status_filter == 'rejected' ? 'selected' : ''; ?>>ยกเลิก</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="date" class="form-label">วันที่แจ้ง</label>
+                    <input type="date" class="form-control" id="date" name="date" value="<?php echo $date_filter; ?>">
                 </div>
             </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>
 
 <!-- รายการแจ้งซ่อม -->
@@ -239,7 +292,7 @@ include 'includes/header.php';
                             <th>หมวดหมู่</th>
                             <th>สถานที่</th>
                             <th>สถานะ</th>
-                            <th>ความสำคัญ</th>
+
                             <th>วันที่แจ้ง</th>
                             <th>จัดการ</th>
                         </tr>
@@ -263,17 +316,7 @@ include 'includes/header.php';
                                     echo $status_badges[$request['status']];
                                     ?>
                                 </td>
-                                <td>
-                                    <?php
-                                    $priority_badges = [
-                                        'low' => '<span class="badge bg-success">ต่ำ</span>',
-                                        'medium' => '<span class="badge bg-warning text-dark">ปานกลาง</span>',
-                                        'high' => '<span class="badge bg-danger">สูง</span>',
-                                        'urgent' => '<span class="badge bg-danger"><i class="bx bx-error-circle me-1"></i>เร่งด่วน</span>'
-                                    ];
-                                    echo $priority_badges[$request['priority']];
-                                    ?>
-                                </td>
+
                                 <td><?php echo thai_date($request['created_at'], 'j M Y'); ?></td>
                                 <td>
                                     <div class="btn-group">

@@ -20,15 +20,21 @@ $user = mysqli_fetch_assoc($result);
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $title = trim($_POST['title']);
     $category_id = intval($_POST['category_id']);
-    $location = trim($_POST['location']);
+    $building = trim($_POST['building'] ?? '');
+    $department = trim($_POST['department'] ?? '');
+    $room_location = trim($_POST['room_location'] ?? '');
     $asset_number = trim($_POST['asset_number']);
     $description = trim($_POST['description']);
     $priority = 'medium'; // ค่า default - admin/building_staff จะกำหนดความสำคัญเองในภายหลัง
     $image_paths = [];
 
+    // รวมข้อมูลสถานที่ (อาคาร | คณะ/หน่วยงาน | หมายเลขห้อง/รายละเอียด)
+    $loc_parts = array_filter([$building, $department, $room_location]);
+    $location = implode(' | ', $loc_parts);
+
     // ตรวจสอบว่ามีข้อมูลครบหรือไม่
-    if (empty($title) || empty($category_id) || empty($description) || empty($location)) {
-        $error = 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน';
+    if (empty($title) || empty($category_id) || empty($description) || empty($building) || empty($department) || empty($room_location)) {
+        $error = 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (เลือกอาคาร/เลขอาคาร, คณะ/หน่วยงาน และระบุห้อง/ชั้น)';
     } elseif (!isset($_FILES['images']) || empty(array_filter($_FILES['images']['size']))) {
         $error = 'กรุณาแนบรูปภาพประกอบการแจ้งซ่อมอย่างน้อย 1 รูป';
     } else {
@@ -304,6 +310,103 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 $query = "SELECT * FROM categories ORDER BY category_name";
 $categories = mysqli_query($conn, $query);
 
+// Auto-add คอลัมน์ asset_number ในตาราง repair_requests ถ้ายังไม่มี
+$check_asset_col = mysqli_query($conn, "SHOW COLUMNS FROM `repair_requests` LIKE 'asset_number'");
+if ($check_asset_col && mysqli_num_rows($check_asset_col) == 0) {
+    mysqli_query($conn, "ALTER TABLE `repair_requests` ADD COLUMN `asset_number` VARCHAR(100) DEFAULT NULL AFTER `location`");
+}
+
+// Auto-create ตาราง buildings ถ้ายังไม่มี
+$create_buildings_sql = "CREATE TABLE IF NOT EXISTS `buildings` (
+    `id` INT(11) NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(191) NOT NULL,
+    `sort_order` INT(11) NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_building_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+mysqli_query($conn, $create_buildings_sql);
+
+// ตรวจสอบและล้างข้อมูลเดิมเพื่ออัปเดตตามลำดับและรูปแบบใหม่ล่าสุด (รวมสถานที่อื่นๆ)
+$check_first = mysqli_query($conn, "SELECT name FROM buildings WHERE sort_order = 3");
+$third_row = mysqli_fetch_assoc($check_first);
+$check_cnt = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt FROM buildings"));
+if (!$third_row || $third_row['name'] !== 'อาคารศูนย์วิทยาศาสตร์' || ($check_cnt['cnt'] ?? 0) < 45) {
+    mysqli_query($conn, "TRUNCATE TABLE buildings");
+
+    $default_buildings = [
+        'อาคารคณะวิทยาการจัดการ',
+        'อาคารหอประชุมขุมทองวิไล',
+        'อาคารศูนย์วิทยาศาสตร์',
+        'อาคารพลศึกษา',
+        'อาคารเกษตร',
+        'อาคารเทคโนโลยีอุตสาหกรรม (หลังเก่า)',
+        'อาคารหอพักกัลปพฤกษ์',
+        'อาคารหอพักภูกระดึง',
+        'อาคารหอพักอินทนิล',
+        'อาคารหอพักดอกคูณ',
+        'อาคารหอพักหางนกยูง',
+        'อาคารหอพักภูหลวง',
+        'อาคารหอพักภูเรือ',
+        'อาคารหอพักภูหอ',
+        'อาคารศูนย์ภาษาและคอมพิวเตอร์',
+        'อาคารวิทยาศาสตร์เทคโนโลยีอาหาร',
+        'อาคารสำนักงานบัณฑิตศึกษา',
+        'อาคารโรงเรียนสาธิต 3 หลัง',
+        'อาคารคณะเทคโนโลยีอุตสาหกรรม',
+        'อาคารศิลปกรรม',
+        'อาคารภูคำ',
+        'อาคารศูนย์วัฒนธรรม',
+        'อาคารสำนักงานวิทยบริการ',
+        'อาคารวิชญาการ',
+        'อาคารคณะมนุษยศาสตร์และสังคมศาสตร์ (อาคาร 1)',
+        'อาคารคณะครุศาสตร์ (อาคาร 2)',
+        'อาคารคณะวิทยาศาสตร์และเทคโนโลยี (อาคาร 3)',
+        'อาคารตึกแฉก (อาคาร 4)',
+        'อาคารอาหารและโภชนาการ (อาคาร 9)',
+        'อาคารเรียนรวม 8 ชั้น (อาคาร 18)',
+        'อาคารปฏิบัติการสหวิทยาการเฉลิมพระเกียรติ 80 พรรษา (อาคาร 19)',
+        'อาคารสหวิทยาการสารสนเทศ (อาคาร 20)',
+        'อาคารที่พักอาจารย์ (อาคาร 21)',
+        'อาคารศูนย์ข้อมูลสารสนเทศ (อาคาร 22)',
+        'อาคารเรียนรวมเอนกประสงค์ (อาคาร 23)',
+        'อาคารสำนักวิทยบริการและเทคโนโลยีสารสนเทศ (อาคาร 24)',
+        'อาคารกีฬาในร่ม (อาคาร 25)',
+        'อาคารอัฒจันทร์ สนามกีฬาร่วมใจ (อาคาร 26)',
+        'อาคารกีฬาทางน้ำ (อาคาร 27)',
+        'อาคารเรียนวิทยาศาสตร์และห้องปฏิบัติการ (อาคาร 28)',
+        'อาคารโรงเรียนสาธิต (อาคาร 29)',
+        'อาคารที่พักนักศึกษา (อาคาร 30)',
+        'อาคารที่พักบุคลากร (อาคาร 31)',
+        'อาคารปฏิบัติการทางการเกษตร (อาคาร 32)',
+        'สถานที่อื่นๆ'
+    ];
+
+    foreach ($default_buildings as $i => $bname) {
+        db_insert("INSERT IGNORE INTO buildings (name, sort_order) VALUES (?, ?)", "si", [$bname, $i + 1]);
+    }
+}
+
+// ดึงข้อมูลอาคาร
+$bld_query = mysqli_query($conn, "SELECT * FROM buildings ORDER BY sort_order ASC, id ASC");
+$buildings_list = [];
+if ($bld_query) {
+    while ($b = mysqli_fetch_assoc($bld_query)) {
+        $buildings_list[] = $b['name'];
+    }
+}
+
+// ดึงข้อมูลคณะ/หน่วยงาน จากตาราง departments
+$dept_query = mysqli_query($conn, "SELECT * FROM departments ORDER BY sort_order ASC, name ASC");
+$departments_list = [];
+if ($dept_query) {
+    while ($d = mysqli_fetch_assoc($dept_query)) {
+        $departments_list[] = $d['name'];
+    }
+}
+if (!in_array('อื่นๆ', $departments_list) && !in_array('หน่วยงานอื่นๆ', $departments_list)) {
+    $departments_list[] = 'อื่นๆ';
+}
+
 // แสดงหน้าเว็บ
 include 'includes/header.php';
 ?>
@@ -331,7 +434,7 @@ include 'includes/header.php';
         </h6>
     </div>
     <div class="card-body">
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" id="repairForm">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="title" class="form-label">หัวข้อเรื่อง <span class="text-danger">*</span></label>
@@ -347,8 +450,8 @@ include 'includes/header.php';
                     <label for="category_id" class="form-label">หมวดหมู่ <span class="text-danger">*</span></label>
                     <div class="input-group mb-3">
                         <span class="input-group-text bg-light"><i class="bx bx-category"></i></span>
-                        <select class="form-select" id="category_id" name="category_id" required>
-                            <option value="">เลือกหมวดหมู่</option>
+                        <select class="form-select select2" id="category_id" name="category_id" required>
+                            <option value="">-- เลือกหมวดหมู่ --</option>
                             <?php while ($category = mysqli_fetch_assoc($categories)): ?>
                                 <option value="<?php echo $category['category_id']; ?>" <?php echo (isset($_POST['category_id']) && $_POST['category_id'] == $category['category_id']) ? 'selected' : ''; ?>>
                                     <?php echo $category['category_name']; ?>
@@ -358,14 +461,54 @@ include 'includes/header.php';
                     </div>
                 </div>
 
+                <!-- อาคาร/เลขอาคาร (Dropdown list พิมพ์ค้นหาได้ + บังคับให้เลือก) -->
                 <div class="col-md-6">
-                    <label for="location" class="form-label">สถานที่/หมายเลขห้อง/อาคาร <span
-                            class="text-danger">*</span></label>
+                    <label for="building" class="form-label">อาคาร/เลขอาคาร <span class="text-danger">*</span></label>
                     <div class="input-group mb-3">
-                        <span class="input-group-text bg-light"><i class="bx bx-map"></i></span>
-                        <input type="text" class="form-control" id="location" name="location"
-                            placeholder="ระบุสถานที่ หมายเลขห้อง และ หมายเลขอาคาร" required
-                            value="<?php echo isset($_POST['location']) ? htmlspecialchars($_POST['location']) : ''; ?>">
+                        <span class="input-group-text bg-light"><i class="bx bx-building-house"></i></span>
+                        <select class="form-select select2" id="building" name="building" required>
+                            <option value="">-- พิมพ์ค้นหา หรือ เลือกอาคาร/เลขอาคาร --</option>
+                            <?php foreach ($buildings_list as $bld): ?>
+                                <option value="<?php echo htmlspecialchars($bld); ?>" <?php echo (isset($_POST['building']) && $_POST['building'] == $bld) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($bld); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- คณะ/หน่วยงาน (Dropdown list พิมพ์ค้นหาได้ + บังคับให้เลือก) -->
+                <div class="col-md-6">
+                    <label for="department" class="form-label">คณะ/หน่วยงาน <span class="text-danger">*</span></label>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-light"><i class="bx bx-buildings"></i></span>
+                        <select class="form-select select2" id="department" name="department" required>
+                            <option value="">-- พิมพ์ค้นหา หรือ เลือกคณะ/หน่วยงาน --</option>
+                            <?php foreach ($departments_list as $dept): ?>
+                                <?php 
+                                    $selected = '';
+                                    if (isset($_POST['department'])) {
+                                        if ($_POST['department'] == $dept) $selected = 'selected';
+                                    } elseif (isset($user['department']) && $user['department'] == $dept) {
+                                        $selected = 'selected';
+                                    }
+                                ?>
+                                <option value="<?php echo htmlspecialchars($dept); ?>" <?php echo $selected; ?>>
+                                    <?php echo htmlspecialchars($dept); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- สถานที่/หมายเลขห้อง/รายละเอียดชั้น -->
+                <div class="col-md-6">
+                    <label for="room_location" class="form-label">สถานที่/หมายเลขห้อง/รายละเอียดชั้น <span class="text-danger">*</span></label>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-light"><i class="bx bx-map-pin"></i></span>
+                        <input type="text" class="form-control" id="room_location" name="room_location"
+                            placeholder="ระบุสถานที่ หมายเลขห้อง และชั้น เช่น ห้อง 20104 ชั้น 1" required
+                            value="<?php echo isset($_POST['room_location']) ? htmlspecialchars($_POST['room_location']) : ''; ?>">
                     </div>
                 </div>
 
@@ -515,7 +658,48 @@ include 'includes/header.php';
     });
 
     // Validate ก่อน submit
-    document.querySelector('form').addEventListener('submit', function (e) {
+    document.querySelector('#repairForm').addEventListener('submit', function (e) {
+        const bldVal = document.getElementById('building') ? document.getElementById('building').value : '';
+        const deptVal = document.getElementById('department') ? document.getElementById('department').value : '';
+
+        if (!bldVal) {
+            e.preventDefault();
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'กรุณาเลือกอาคาร/เลขอาคาร',
+                    text: 'โปรดเลือกอาคาร/เลขอาคารจากรายการ dropdown',
+                    confirmButtonText: 'ตกลง'
+                }).then(() => {
+                    if (window.jQuery && $('#building').data('select2')) {
+                        $('#building').select2('open');
+                    }
+                });
+            } else {
+                alert('กรุณาเลือกอาคาร/เลขอาคาร');
+            }
+            return;
+        }
+
+        if (!deptVal) {
+            e.preventDefault();
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'กรุณาเลือกคณะ/หน่วยงาน',
+                    text: 'โปรดเลือกคณะ/หน่วยงานจากรายการ dropdown',
+                    confirmButtonText: 'ตกลง'
+                }).then(() => {
+                    if (window.jQuery && $('#department').data('select2')) {
+                        $('#department').select2('open');
+                    }
+                });
+            } else {
+                alert('กรุณาเลือกคณะ/หน่วยงาน');
+            }
+            return;
+        }
+
         if (!imageInput.files || imageInput.files.length === 0) {
             e.preventDefault();
             imageError.textContent = 'กรุณาแนบรูปภาพประกอบอย่างน้อย 1 รูป';
@@ -542,10 +726,11 @@ include 'includes/footer.php';
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    document.querySelector('form').addEventListener('submit', function (e) {
-        // Validate ก่อน (re-check)
+    document.querySelector('#repairForm').addEventListener('submit', function (e) {
+        const bldVal = document.getElementById('building') ? document.getElementById('building').value : '';
+        const deptVal = document.getElementById('department') ? document.getElementById('department').value : '';
         const imgInput = document.getElementById('images');
-        if (!imgInput || !imgInput.files || imgInput.files.length === 0) return; // ให้ native validate จัดการ
+        if (!bldVal || !deptVal || !imgInput || !imgInput.files || imgInput.files.length === 0) return;
 
         // แสดง loading
         Swal.fire({
