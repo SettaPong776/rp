@@ -1147,7 +1147,7 @@ $status_bg = [
                             <div class="avatar"><?php
                             $name = $request['requester_name'] ?? '';
                             if (function_exists('mb_substr')) {
-                                echo mb_substr($name, 0, 1);
+                                echo mb_substr($name, 0, 1, 'UTF-8');
                             } else {
                                 preg_match('/./u', $name, $m);
                                 echo $m[0] ?? substr($name, 0, 1);
@@ -1212,18 +1212,9 @@ $status_bg = [
                                         <div class="timeline-user">โดย:
                                             <?php echo htmlspecialchars($history['fullname'] ?? ''); ?>
                                         </div>
-                                        <?php if ($history['remark']): ?>
+                                        <?php if (!empty($history['remark'])): ?>
                                             <div class="timeline-remark">
-                                                "<?php
-                                                $remark = $history['remark'] ?? '';
-                                                if (function_exists('mb_substr')) {
-                                                    echo mb_substr($remark, 0, 80);
-                                                    echo mb_strlen($remark) > 80 ? '...' : '';
-                                                } else {
-                                                    echo substr($remark, 0, 80);
-                                                    echo strlen($remark) > 80 ? '...' : '';
-                                                }
-                                                ?>"
+                                                "<?php echo nl2br(htmlspecialchars($history['remark'])); ?>"
                                             </div>
                                         <?php endif; ?>
                                     </div>
