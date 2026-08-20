@@ -555,6 +555,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         <i class="bx bx-list-ul"></i>
                         <span>รายการแจ้งซ่อม</span>
                     </a>
+                    <a href="room_history.php"
+                        class="menu-item <?php echo ($current_page == 'room_history.php') ? 'active' : ''; ?>">
+                        <i class="bx bx-history"></i>
+                        <span>ประวัติการซ่อม</span>
+                    </a>
                     <a href="admin_categories.php"
                         class="menu-item <?php echo ($current_page == 'admin_categories.php') ? 'active' : ''; ?>">
                         <i class="bx bx-category"></i>
@@ -597,6 +602,11 @@ $current_page = basename($_SERVER['PHP_SELF']);
                         class="menu-item <?php echo ($current_page == 'my_requests.php') ? 'active' : ''; ?>">
                         <i class="bx bx-list-ul"></i>
                         <span>รายการแจ้งซ่อมของฉัน</span>
+                    </a>
+                    <a href="room_history.php"
+                        class="menu-item <?php echo ($current_page == 'room_history.php') ? 'active' : ''; ?>">
+                        <i class="bx bx-history"></i>
+                        <span>ประวัติการซ่อม</span>
                     </a>
                     <a href="profile.php" class="menu-item <?php echo ($current_page == 'profile.php') ? 'active' : ''; ?>">
                         <i class="bx bx-user"></i>

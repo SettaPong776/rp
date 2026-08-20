@@ -510,6 +510,8 @@ include 'includes/header.php';
                             placeholder="ระบุสถานที่ หมายเลขห้อง และชั้น เช่น ห้อง 20104 ชั้น 1" required
                             value="<?php echo isset($_POST['room_location']) ? htmlspecialchars($_POST['room_location']) : ''; ?>">
                     </div>
+                    <!-- Widget ประวัติการซ่อมของห้องนี้ -->
+                    <div id="room-history-widget" style="display:none;" class="mb-2"></div>
                 </div>
 
                 <div class="col-md-6">
@@ -722,6 +724,111 @@ include 'includes/header.php';
 // แสดงส่วน footer
 include 'includes/footer.php';
 ?>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function() {
+    // ===== Widget ประวัติการซ่อมของห้อง (create_request) =====
+    const roomInput    = document.getElementById('room_location');
+    const buildingEl   = document.getElementById('building');  // select2
+    const widgetDiv    = document.getElementById('room-history-widget');
+    let   debounceTimer;
+
+    function fetchRoomHistory() {
+        const building = (buildingEl ? buildingEl.value : '') || '';
+        const room     = (roomInput  ? roomInput.value.trim() : '') || '';
+        if (!building && room.length < 2) {
+            widgetDiv.style.display = 'none';
+            return;
+        }
+        const params = new URLSearchParams({ building, room });
+        fetch('api/room_history.php?' + params.toString())
+            .then(r => r.json())
+            .then(data => {
+                renderWidget(data, building, room);
+            })
+            .catch(() => {
+                widgetDiv.style.display = 'none';
+            });
+    }
+
+    function renderWidget(data, building, room) {
+        const total     = parseInt(data.count || 0);
+        const stats     = data.stats || {};
+        const records   = data.records || [];
+        const labelParts = [building, room].filter(Boolean);
+
+        if (!building && room.length < 2) {
+            widgetDiv.style.display = 'none';
+            return;
+        }
+
+        let alertStyle = 'background-color: #f8f9fa; border: 1px solid #e9ecef; color: #6c757d;';
+        let iconClass  = 'bx-info-circle text-secondary';
+        let headerText = 'ยังไม่เคยมีประวัติการแจ้งซ่อมของสถานที่นี้';
+        if (total > 0) {
+            alertStyle = 'background-color: #f0f7ff; border: 1px solid #d0e3ff; color: #0c5460;';
+            iconClass  = 'bx-history text-primary';
+            headerText = `พบประวัติการแจ้งซ่อมสถานที่นี้ <strong>${total} ครั้ง</strong> (เสร็จสิ้นแล้ว ${parseInt(stats.completed||0)} ครั้ง)`;
+        }
+
+        let html = `<div class="alert py-2 px-3 mb-0" style="${alertStyle} font-size:0.88rem; border-radius:8px;">
+            <div class="d-flex justify-content-between align-items-center">
+                <span><i class="bx ${iconClass} me-1" style="font-size:1.1rem; vertical-align:-2px;"></i>${headerText}</span>`;
+
+        if (total > 0) {
+            const previewTitles = records.slice(0, 5).map(r =>
+                `<li class="mb-1"><small><a href="view_request.php?id=${r.request_id}" target="_blank" class="text-decoration-none fw-semibold"><i class="bx bx-show-alt me-1"></i>#${r.request_id} ${escapeHtmlWidget(r.title)}</a> – <em class="text-muted">${escapeHtmlWidget(r.category_name)}</em></small></li>`).join('');
+            html += `<button type="button" class="btn btn-sm btn-outline-secondary py-0 ms-2"
+                onclick="toggleRoomWidgetDetail()"><i class="bx bx-chevron-down" id="widgetChevron"></i></button>`;
+            html += `</div><ul class="mb-0 mt-2 ps-3 style-none" id="room-widget-detail" style="display:none; list-style-type: none;">${previewTitles}`;
+            if (total > 5) {
+                const searchLink = `room_history.php?building=${encodeURIComponent(building)}&room=${encodeURIComponent(room)}`;
+                html += `<li class="mt-1"><small><a href="${searchLink}" target="_blank" class="text-primary fw-bold text-decoration-none">และอีก ${total - 5} รายการ (ดูประวัติทั้งหมด) <i class="bx bx-right-arrow-alt"></i></a></small></li>`;
+            }
+            html += '</ul>';
+        } else {
+            html += '</div>';
+        }
+        html += '</div>';
+        widgetDiv.innerHTML = html;
+        widgetDiv.style.display = 'block';
+    }
+
+    window.toggleRoomWidgetDetail = function() {
+        const detail  = document.getElementById('room-widget-detail');
+        const chevron = document.getElementById('widgetChevron');
+        if (!detail) return;
+        const isHidden = detail.style.display === 'none';
+        detail.style.display = isHidden ? 'block' : 'none';
+        if (chevron) {
+            chevron.className = isHidden ? 'bx bx-chevron-up' : 'bx bx-chevron-down';
+        }
+    };
+
+    function escapeHtmlWidget(text) {
+        if (!text) return '';
+        return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function onRoomChange() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(fetchRoomHistory, 600);
+    }
+
+    if (roomInput)  roomInput.addEventListener('input', onRoomChange);
+
+    // ฟัง Select2 change event และ native change
+    if (buildingEl) {
+        buildingEl.addEventListener('change', onRoomChange);
+        // Select2 custom event
+        if (window.jQuery) {
+            jQuery('#building').on('select2:select select2:unselect', onRoomChange);
+        }
+    }
+}());
+</script>
 
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

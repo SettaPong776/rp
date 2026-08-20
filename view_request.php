@@ -369,9 +369,25 @@ include 'includes/header.php';
                     <span>หมวดหมู่: <?php echo $request['category_name']; ?></span>
                 </div>
                 <?php if ($request['location']): ?>
-                    <div class="d-flex align-items-center mb-3">
+                    <div class="d-flex align-items-center mb-3 flex-wrap gap-2">
                         <i class="bx bx-map me-2 text-primary"></i>
-                        <span>สถานที่: <?php echo $request['location']; ?></span>
+                        <span>สถานที่: <?php echo htmlspecialchars($request['location']); ?></span>
+                        <?php
+                        // แยก building จาก location (รูปแบบ: อาคาร | คณะ | ห้อง)
+                        $loc_parts_view = explode(' | ', $request['location']);
+                        $building_for_history = trim($loc_parts_view[0] ?? '');
+                        $room_for_history     = trim($loc_parts_view[2] ?? (count($loc_parts_view) == 2 ? $loc_parts_view[1] : ''));
+                        if (!empty($building_for_history) || !empty($room_for_history)):
+                        ?>
+                        <button type="button" class="btn btn-sm btn-outline-info ms-1"
+                            id="btnRoomHistory"
+                            data-building="<?php echo htmlspecialchars($building_for_history); ?>"
+                            data-room="<?php echo htmlspecialchars($room_for_history); ?>"
+                            data-exclude="<?php echo $request_id; ?>"
+                            onclick="openRoomHistoryModal(this)">
+                            <i class="bx bx-history me-1"></i>ประวัติการซ่อมของห้องนี้
+                        </button>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
                 <?php if ($request['asset_number']): ?>
@@ -992,4 +1008,154 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 });
+</script>
+
+<!-- Modal: ประวัติการซ่อมของห้อง -->
+<div class="modal fade" id="roomHistoryModal" tabindex="-1" aria-labelledby="roomHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;">
+                <h5 class="modal-title" id="roomHistoryModalLabel">
+                    <i class="bx bx-history me-2"></i>ประวัติการซ่อม: <span id="rhModalTitle">...</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="roomHistoryModalBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">กำลังโหลดข้อมูล...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openRoomHistoryModal(btn) {
+    const building   = btn.getAttribute('data-building') || '';
+    const room       = btn.getAttribute('data-room') || '';
+    const excludeId  = btn.getAttribute('data-exclude') || 0;
+    const labelParts = [building, room].filter(Boolean);
+
+    document.getElementById('rhModalTitle').textContent = labelParts.join(' / ') || 'ห้องนี้';
+    document.getElementById('roomHistoryModalBody').innerHTML =
+        '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div>' +
+        '<p class="mt-2 text-muted">กำลังโหลดข้อมูล...</p></div>';
+
+    const modal = new bootstrap.Modal(document.getElementById('roomHistoryModal'));
+    modal.show();
+
+    const params = new URLSearchParams({ building, room, exclude_id: excludeId });
+    fetch('api/room_history.php?' + params.toString())
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('roomHistoryModalBody').innerHTML = renderRoomHistory(data, building, room);
+        })
+        .catch(() => {
+            document.getElementById('roomHistoryModalBody').innerHTML =
+                '<div class="alert alert-danger m-3"><i class="bx bx-error-circle me-1"></i>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+        });
+}
+
+function renderRoomHistory(data, building, room) {
+    const statusBadge = {
+        'pending':     '<span class="badge bg-warning text-dark">รอดำเนินการ</span>',
+        'in_progress': '<span class="badge bg-info text-white">กำลังดำเนินการ</span>',
+        'completed':   '<span class="badge bg-success">เสร็จสิ้น</span>',
+        'rejected':    '<span class="badge bg-danger">ยกเลิก</span>',
+    };
+    const priorityBadge = {
+        'low':    '<span class="badge bg-success">ต่ำ</span>',
+        'medium': '<span class="badge bg-warning text-dark">ปานกลาง</span>',
+        'high':   '<span class="badge bg-danger">สูง</span>',
+        'urgent': '<span class="badge bg-danger"><i class="bx bx-error-circle"></i> เร่งด่วน</span>',
+    };
+
+    const total     = parseInt(data.count || 0);
+    const stats     = data.stats || {};
+    const records   = data.records || [];
+
+    // สรุปยอด
+    let html = `<div class="row g-3 mb-4 px-1">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center py-3">
+                <div class="h2 mb-0 text-primary">${parseInt(stats.total||0)}</div>
+                <small class="text-muted">ทั้งหมด (ไม่รวมรายการนี้)</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center py-3">
+                <div class="h2 mb-0 text-success">${parseInt(stats.completed||0)}</div>
+                <small class="text-muted">เสร็จสิ้น</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center py-3">
+                <div class="h2 mb-0 text-info">${parseInt(stats.in_progress||0)}</div>
+                <small class="text-muted">กำลังดำเนินการ</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center py-3">
+                <div class="h2 mb-0 text-warning">${parseInt(stats.pending||0)}</div>
+                <small class="text-muted">รอดำเนินการ</small>
+            </div>
+        </div>
+    </div>`;
+
+    if (total === 0) {
+        html += '<div class="text-center text-muted py-4"><i class="bx bx-info-circle fs-1"></i><p class="mt-2">ไม่มีประวัติการซ่อมอื่นๆ ของห้องนี้</p></div>';
+        return html;
+    }
+
+    html += `<div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+            <tr>
+                <th>#</th>
+                <th>เรื่อง</th>
+                <th>หมวดหมู่</th>
+                <th class="text-center">สถานะ</th>
+                <th class="text-center">ความสำคัญ</th>
+                <th>วันที่แจ้ง</th>
+                <th>ผู้แจ้ง</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    records.forEach(r => {
+        const dateStr = r.created_at ? r.created_at.substring(0, 10) : '-';
+        html += `<tr>
+            <td><small class="text-muted">#${r.request_id}</small></td>
+            <td>${escapeHtml(r.title)}</td>
+            <td><small>${escapeHtml(r.category_name)}</small></td>
+            <td class="text-center">${statusBadge[r.status] || r.status_th}</td>
+            <td class="text-center">${priorityBadge[r.priority] || r.priority_th}</td>
+            <td><small>${dateStr}</small></td>
+            <td><small>${escapeHtml(r.requester_name)}</small></td>
+            <td><a href="view_request.php?id=${r.request_id}" class="btn btn-sm btn-outline-primary" target="_blank"><i class="bx bx-link-external"></i></a></td>
+        </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+
+    if (total > 20) {
+        html += `<p class="text-muted small text-end mt-2">แสดง 20 รายการล่าสุด จากทั้งหมด ${total} รายการ</p>`;
+    }
+
+    return html;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
 </script>
