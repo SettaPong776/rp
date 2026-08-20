@@ -29,19 +29,22 @@ $conditions = [];
 $params     = [];
 $types      = '';
 
+$clean_building = preg_replace('/\s+/', '', $building);
+$clean_room     = preg_replace('/\s+/', '', $room);
+
 if (!empty($building) && !empty($room)) {
-    // ค้นหาทั้งสองจากช่อง location (รูปแบบ "อาคาร | คณะ | ห้อง") หรือจาก building + room_location แยก
-    $conditions[] = "(r.location LIKE ? AND r.location LIKE ?)";
-    $params[]     = '%' . $building . '%';
-    $params[]     = '%' . $room . '%';
+    // ค้นหาทั้งสองแบบละเว้นช่องว่าง (Space-insensitive) ให้แมทช์แม่นยำแม้เว้นวรรคไม่เท่ากัน
+    $conditions[] = "(REPLACE(r.location, ' ', '') LIKE ? AND REPLACE(r.location, ' ', '') LIKE ?)";
+    $params[]     = '%' . $clean_building . '%';
+    $params[]     = '%' . $clean_room . '%';
     $types       .= 'ss';
 } elseif (!empty($building)) {
-    $conditions[] = "r.location LIKE ?";
-    $params[]     = '%' . $building . '%';
+    $conditions[] = "REPLACE(r.location, ' ', '') LIKE ?";
+    $params[]     = '%' . $clean_building . '%';
     $types       .= 's';
 } else {
-    $conditions[] = "r.location LIKE ?";
-    $params[]     = '%' . $room . '%';
+    $conditions[] = "REPLACE(r.location, ' ', '') LIKE ?";
+    $params[]     = '%' . $clean_room . '%';
     $types       .= 's';
 }
 

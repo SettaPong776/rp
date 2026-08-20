@@ -20,9 +20,9 @@ $search_dept     = trim($_GET['department'] ?? '');
 $search_status   = trim($_GET['status']     ?? '');
 
 $wc = ['1=1']; $params = []; $types = '';
-if (!empty($search_building)) { $wc[] = "r.location LIKE ?"; $params[] = '%'.$search_building.'%'; $types .= 's'; }
-if (!empty($search_dept))     { $wc[] = "r.location LIKE ?"; $params[] = '%'.$search_dept.'%';     $types .= 's'; }
-if (!empty($search_room))     { $wc[] = "r.location LIKE ?"; $params[] = '%'.$search_room.'%';     $types .= 's'; }
+if (!empty($search_building)) { $wc[] = "REPLACE(r.location, ' ', '') LIKE ?"; $params[] = '%'.preg_replace('/\s+/', '', $search_building).'%'; $types .= 's'; }
+if (!empty($search_dept))     { $wc[] = "REPLACE(r.location, ' ', '') LIKE ?"; $params[] = '%'.preg_replace('/\s+/', '', $search_dept).'%';     $types .= 's'; }
+if (!empty($search_room))     { $wc[] = "REPLACE(r.location, ' ', '') LIKE ?"; $params[] = '%'.preg_replace('/\s+/', '', $search_room).'%';     $types .= 's'; }
 if (!empty($search_status))   { $wc[] = "r.status = ?";      $params[] = $search_status;           $types .= 's'; }
 if (!$is_staff)               { $wc[] = "r.user_id = ?";     $params[] = $_SESSION['user_id'];     $types .= 'i'; }
 $w = implode(' AND ', $wc);
@@ -36,13 +36,13 @@ $stats = mysqli_fetch_assoc($sel("SELECT COUNT(*) as total,
     COUNT(CASE WHEN r.status='rejected'    THEN 1 END) as rejected
 FROM repair_requests r WHERE $w"));
 
-$top_res = $sel("SELECT r.location,
+$top_res = $sel("SELECT MAX(r.location) as location,
     COUNT(*) as total,
     COUNT(CASE WHEN r.status='completed'   THEN 1 END) as completed,
     COUNT(CASE WHEN r.status='in_progress' THEN 1 END) as in_progress,
     COUNT(CASE WHEN r.status='pending'     THEN 1 END) as pending
 FROM repair_requests r WHERE $w AND r.location != ''
-GROUP BY r.location ORDER BY total DESC LIMIT 10");
+GROUP BY REPLACE(r.location, ' ', '') ORDER BY total DESC LIMIT 10");
 $top_locations = [];
 while ($row = mysqli_fetch_assoc($top_res)) $top_locations[] = $row;
 
@@ -309,7 +309,7 @@ $clr = fn($k) => http_build_query(array_filter([
           <td class="text-center"><?php echo $sb[$r['status']] ?? htmlspecialchars($r['status']); ?></td>
           <td><small class="text-muted"><?php echo thai_date($r['created_at'],'j M Y'); ?></small></td>
           <td><?php if ($r['completed_date']): ?><small class="text-success"><i class="bx bx-check me-1"></i><?php echo thai_date($r['completed_date'],'j M Y'); ?></small><?php else: ?><span class="text-muted">—</span><?php endif; ?></td>
-          <td class="pe-4"><a href="view_request.php?id=<?php echo $r['request_id']; ?>" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bx bx-show-alt me-1"></i>ดู</a></td>
+          <td class="pe-4"><a href="view_request.php?id=<?php echo $r['request_id']; ?>" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bx bx-show-alt me-1"></i>ดู</a></td>
         </tr>
         <?php endforeach; ?>
         </tbody>
